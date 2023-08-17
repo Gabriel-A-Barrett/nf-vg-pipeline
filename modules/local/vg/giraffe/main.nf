@@ -30,6 +30,7 @@ process VG_GIRAFFE {
         -m ${min} \\
         -d ${dist} \\
         -f ${fq[0]} \\
+        -f ${fq[1]} \\
         -p \\
         > ${prefix}.gam
     
