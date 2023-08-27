@@ -1,4 +1,4 @@
-process VG_AUTOINDEX {
+process VG_GWBT {
     tag "$meta.id"
     label 'process_medium'
     
@@ -8,16 +8,12 @@ process VG_AUTOINDEX {
         'biocontainers/vg:1.50.1--h9ee0642_0' }"
     
     input:
-    tuple val(meta),  path(vcf), path(tbi), path(insertions_fasta)
-    tuple val(meta2), path(fasta)
-    tuple val(meta3), path(fai)
-    val type
+    tuple val(meta), path(vg)
+    tuple val(meta2), path(vcf), path(tbis), path(insertions_fasta)
 
     output:
-    tuple val(meta), path("*.dist")       , emit: dist, optional: true
-    tuple val(meta), path("*.giraffe.gbz"), emit: gbz , optional: true
-    tuple val(meta), path("*.min")        , emit: min , optional: true    
-    path "versions.yml"                   , emit: versions
+    tuple val(meta), path("*.gbwt"), emit: gbwt
+    path "versions.yml"           , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -26,12 +22,12 @@ process VG_AUTOINDEX {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    vg autoindex \\
-        --threads ${task.cpus} \\
-        --workflow ${type} \\
-        --prefix ${prefix} \\
-        --ref-fasta ${fasta} \\
-        --vcf ${vcf}
+    vg gbwt \\
+        -x ${vg} \\
+        -o ${meta} \\
+        -v ${vcf} \\
+        --parse-only --ignore-missing \\
+        ${args}
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -42,7 +38,7 @@ process VG_AUTOINDEX {
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    touch ${prefix}.min
+    touch ${prefix}.gam
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
