@@ -8,8 +8,9 @@ include { VG_SNARLS } from '../modules/local/vg/snarls/main.nf'
 include { VG_CALL } from '../modules/local/vg/call/main.nf'
 include { BCFTOOLS_SORT } from '../modules/nf-core/bcftools/sort/main'
 include { BCFTOOLS_INDEX } from '../modules/nf-core/bcftools/index/main'
+include { BCFTOOLS_REHEADER } from '../modules/nf-core/bcftools/reheader/main'
 include { BCFTOOLS_CONCAT } from '../modules/nf-core/bcftools/concat/main'
-
+include { BCFTOOLS_MERGE } from '../modules/nf-core/bcftools/merge/main'
 
 workflow VARIANT_GRAPH_WORKFLOW {
 
@@ -48,10 +49,12 @@ workflow VARIANT_GRAPH_WORKFLOW {
     
     BCFTOOLS_SORT ( VG_CALL.out.vcf )
 
-    BCFTOOLS_INDEX ( BCFTOOLS_SORT.out.vcf )
+    BCFTOOLS_REHEADER ( BCFTOOLS_SORT.out.vcf )
+
+    BCFTOOLS_INDEX ( BCFTOOLS_REHEADER.out.vcf )
 
     // rewrite meta.id based on letters before number for grouping
-    ch_vcf_tbi = BCFTOOLS_SORT.out.vcf
+    ch_vcf_tbi = BCFTOOLS_REHEADER.out.vcf
     .join( BCFTOOLS_INDEX.out.tbi )
     .map { meta, vcf, tbi ->
         def metaG = [:]
@@ -60,6 +63,7 @@ workflow VARIANT_GRAPH_WORKFLOW {
     }
     .groupTuple(by:0)
 
-    BCFTOOLS_CONCAT ( ch_vcf_tbi )
+
+    BCFTOOLS_MERGE ( ch_vcf_tbi )
 
 }
