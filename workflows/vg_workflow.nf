@@ -15,13 +15,13 @@ include { BCFTOOLS_MERGE } from '../modules/nf-core/bcftools/merge/main'
 workflow VARIANT_GRAPH_WORKFLOW {
 
 
-    ch_vcf_tbi_insfasta = Channel.fromPath ( params.vcf ).map { vcf -> 
+    ch_vcf_tbi_insfasta = Channel.fromPath ( file(params.vcf) ).map { vcf -> 
                 tuple ([id:vcf.simpleName], vcf, params.tbi, []) }
 
-    ch_fasta = Channel.fromPath ( params.fasta ).map { genome -> 
+    ch_fasta = Channel.fromPath ( file(params.fasta) ).map { genome -> 
                 tuple ([id:genome.simpleName], genome) }
 
-    ch_fai = Channel.fromPath ( params.fai ).map { fai -> 
+    ch_fai = Channel.fromPath ( file(params.fai) ).map { fai -> 
                 tuple ([id:fai.simpleName], fai) }
 
     VG_CONSTRUCT ( ch_vcf_tbi_insfasta, ch_fasta, ch_fai )
