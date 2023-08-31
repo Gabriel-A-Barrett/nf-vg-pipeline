@@ -16,7 +16,7 @@ workflow VARIANT_GRAPH_WORKFLOW {
 
 
     ch_vcf_tbi_insfasta = Channel.fromPath ( file(params.vcf) ).map { vcf -> 
-                tuple ([id:vcf.simpleName], vcf, params.tbi, []) }
+                tuple ([id:vcf.simpleName], vcf, file(params.tbi), []) }
 
     ch_fasta = Channel.fromPath ( file(params.fasta) ).map { genome -> 
                 tuple ([id:genome.simpleName], genome) }
