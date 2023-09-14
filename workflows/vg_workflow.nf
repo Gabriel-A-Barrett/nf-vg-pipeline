@@ -11,6 +11,7 @@ include { BCFTOOLS_INDEX } from '../modules/nf-core/bcftools/index/main'
 include { BCFTOOLS_REHEADER } from '../modules/nf-core/bcftools/reheader/main'
 include { BCFTOOLS_CONCAT } from '../modules/nf-core/bcftools/concat/main'
 include { BCFTOOLS_MERGE } from '../modules/nf-core/bcftools/merge/main'
+include { BCFTOOLS_NORM } from '../modules/nf-core/bcftools/norm/main'
 
 workflow VARIANT_GRAPH_WORKFLOW {
 
@@ -66,4 +67,11 @@ workflow VARIANT_GRAPH_WORKFLOW {
 
     BCFTOOLS_MERGE ( ch_vcf_tbi )
 
+    if (params.normalize_variants) {
+        VG_VIEW ( VG_CONSTRUCT.out.graph )
+
+        ch_vcf_tbi_fasta = ch_vcf_tbi.join(VG_VIEW.out.fasta)
+
+        BCFTOOLS_NORM ( ch_vcf_tbi_fasta )
+    }
 }
