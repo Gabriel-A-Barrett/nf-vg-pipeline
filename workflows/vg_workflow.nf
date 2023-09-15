@@ -67,7 +67,6 @@ workflow VARIANT_GRAPH_WORKFLOW {
     }
     .groupTuple(by:0)
 
-
     BCFTOOLS_MERGE ( ch_vcf_tbi )
 
     TABIX_TABIX ( BCFTOOLS_MERGE.out.merged_variants )
