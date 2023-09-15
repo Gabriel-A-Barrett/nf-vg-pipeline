@@ -12,6 +12,9 @@ include { BCFTOOLS_REHEADER } from '../modules/nf-core/bcftools/reheader/main'
 include { BCFTOOLS_CONCAT } from '../modules/nf-core/bcftools/concat/main'
 include { BCFTOOLS_MERGE } from '../modules/nf-core/bcftools/merge/main'
 include { BCFTOOLS_NORM } from '../modules/nf-core/bcftools/norm/main'
+include { VG_PATHS } from '../modules/local/vg/paths/main'
+include { TABIX_TABIX } from '../modules/nf-core/tabix/tabix/main'
+
 
 workflow VARIANT_GRAPH_WORKFLOW {
 
@@ -67,11 +70,13 @@ workflow VARIANT_GRAPH_WORKFLOW {
 
     BCFTOOLS_MERGE ( ch_vcf_tbi )
 
+    TABIX_TABIX ( BCFTOOLS_MERGE.out.merged_variants )
+
     if (params.normalize_variants) {
-        VG_VIEW ( VG_CONSTRUCT.out.graph )
+        VG_PATHS ( VG_CONSTRUCT.out.graph )
 
-        ch_vcf_tbi_fasta = ch_vcf_tbi.join(VG_VIEW.out.fasta)
+        ch_vcf_tbi = BCFTOOLS_MERGE.out.merged_variants.join(TABIX_TABIX.out.tbi, by:0)
 
-        BCFTOOLS_NORM ( ch_vcf_tbi_fasta )
+        BCFTOOLS_NORM ( ch_vcf_tbi, VG_PATHS.out.fasta )
     }
 }
