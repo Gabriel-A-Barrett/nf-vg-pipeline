@@ -46,10 +46,10 @@ workflow VARIANT_GRAPH_WORKFLOW {
     VG_SNARLS ( VG_INDEX.out.xg )
 
     // pre-compute gt support
-    VG_PACK ( VG_FILTER.out.gam, VG_INDEX.out.xg.first() )
+    VG_PACK ( VG_FILTER.out.gam, VG_AUTOINDEX.out.gbz.first() )
 
     // call indv. genotypes
-    VG_CALL ( VG_PACK.out.pack, VG_INDEX.out.xg.first(), VG_SNARLS.out.snarls.first() )
+    VG_CALL ( VG_PACK.out.pack, VG_AUTOINDEX.out.gbz.first(), VG_SNARLS.out.snarls.first() )
     
     BCFTOOLS_SORT ( VG_CALL.out.vcf )
 
