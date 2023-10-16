@@ -1,10 +1,10 @@
 #!/usr/bin/env nextflow
-include { VARIANT_GRAPH_WORKFLOW } from './workflows/vg_workflow.nf'
+include { VG } from './workflows/vg.nf'
 
 nextflow.enable.dsl = 2
 
 workflow {
 
-    VARIANT_GRAPH_WORKFLOW ()
+    VG ()
 
 }

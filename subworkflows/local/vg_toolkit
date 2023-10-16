@@ -1,24 +1,24 @@
-include { VG_CONSTRUCT } from '../modules/nf-core/vg/construct/main.nf'
-include { VG_INDEX } from '../modules/nf-core/vg/index/main'
-include { VG_AUTOINDEX } from '../modules/local/vg/autoindex/main.nf'
-include { VG_GIRAFFE } from '../modules/local/vg/giraffe/main.nf'
-include { VG_FILTER } from '../modules/local/vg/filter/main.nf'
-include { VG_PACK } from '../modules/local/vg/pack/main.nf'
-include { VG_SNARLS } from '../modules/local/vg/snarls/main.nf'
-include { VG_CALL } from '../modules/local/vg/call/main.nf'
-include { BCFTOOLS_SORT } from '../modules/nf-core/bcftools/sort/main'
-include { BCFTOOLS_INDEX } from '../modules/nf-core/bcftools/index/main'
-include { BCFTOOLS_REHEADER } from '../modules/nf-core/bcftools/reheader/main'
-include { BCFTOOLS_CONCAT } from '../modules/nf-core/bcftools/concat/main'
-include { BCFTOOLS_MERGE } from '../modules/nf-core/bcftools/merge/main'
-include { BCFTOOLS_NORM } from '../modules/nf-core/bcftools/norm/main'
-include { VG_PATHS } from '../modules/local/vg/paths/main'
-include { TABIX_TABIX as TABIX_TABIX_1} from '../modules/nf-core/tabix/tabix/main'
-include { TABIX_TABIX as TABIX_TABIX_2} from '../modules/nf-core/tabix/tabix/main'
-include { SAMTOOLS_FAIDX } from '../modules/nf-core/samtools/faidx/main'
-include { VG_STATS } from '../modules/local/vg/stats/main'
+include { VG_CONSTRUCT } from '../../modules/nf-core/vg/construct/main.nf'
+include { VG_INDEX } from '../../modules/nf-core/vg/index/main'
+include { VG_AUTOINDEX } from '../../modules/local/vg/autoindex/main.nf'
+include { VG_GIRAFFE } from '../../modules/local/vg/giraffe/main.nf'
+include { VG_FILTER } from '../../modules/local/vg/filter/main.nf'
+include { VG_PACK } from '../../modules/local/vg/pack/main.nf'
+include { VG_SNARLS } from '../../modules/local/vg/snarls/main.nf'
+include { VG_CALL } from '../../modules/local/vg/call/main.nf'
+include { BCFTOOLS_SORT } from '../../modules/nf-core/bcftools/sort/main'
+include { BCFTOOLS_INDEX } from '../../modules/nf-core/bcftools/index/main'
+include { BCFTOOLS_REHEADER } from '../../modules/nf-core/bcftools/reheader/main'
+include { BCFTOOLS_CONCAT } from '../../modules/nf-core/bcftools/concat/main'
+include { BCFTOOLS_MERGE } from '../../modules/nf-core/bcftools/merge/main'
+include { BCFTOOLS_NORM } from '../../modules/nf-core/bcftools/norm/main'
+include { VG_PATHS } from '../../modules/local/vg/paths/main'
+include { TABIX_TABIX as TABIX_TABIX_1} from '../../modules/nf-core/tabix/tabix/main'
+include { TABIX_TABIX as TABIX_TABIX_2} from '../../modules/nf-core/tabix/tabix/main'
+include { SAMTOOLS_FAIDX } from '../../modules/nf-core/samtools/faidx/main'
+include { VG_STATS } from '../../modules/local/vg/stats/main'
 
-workflow VARIANT_GRAPH_WORKFLOW {
+workflow VG_TOOLKIT {
 
     ch_fasta = Channel.fromPath ( file(params.fasta) ).map { genome -> 
                 tuple ([id:genome.simpleName], genome) }
@@ -98,8 +98,11 @@ workflow VARIANT_GRAPH_WORKFLOW {
     if (params.normalize_variants) {
         VG_PATHS ( VG_CONSTRUCT.out.graph )
 
-        ch_vcf_tbi = BCFTOOLS_MERGE.out.merged_variants.join(TABIX_TABIX.out.tbi, by:0)
+        ch_vcf_tbi = BCFTOOLS_MERGE.out.merged_variants.join(TABIX_TABIX_2.out.tbi, by:0)
 
         BCFTOOLS_NORM ( ch_vcf_tbi, VG_PATHS.out.fasta )
     }
+
+    emit:
+    norm_vcf = BCFTOOLS_NORM.out.vcf
 }
