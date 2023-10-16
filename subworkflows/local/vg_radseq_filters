@@ -19,10 +19,10 @@ workflow VG_RADSEQ_FILTERS {
     ch_miss = Channel.fromList(params.fraction_missingness_list)
     ch_mac = Channel.fromList(params.minor_allele_count_list)
 
-    FILTER1 ( ch_vcf_tbi, [], [], [], ch_miss, ch_mac)
+    FILTER1 ( ch_vcf_tbi, [], [], [], ch_miss, ch_mac) // range of fmiss and mac filters
 
-    RADSEQ_FILTERS_1 ( FILTER1.out.vcf , [], 'first' )
+    RADSEQ_FILTERS_1 ( FILTER1.out.vcf , [], 'first' ) // filter and identify bad-apples
     
-    RADSEQ_FILTERS_2 ( FILTER1.out.vcf, RADSEQ_FILTERS_1.out.txt, 'second' )
+    RADSEQ_FILTERS_2 ( FILTER1.out.vcf, RADSEQ_FILTERS_1.out.txt, 'second' ) // remove bad-apples
 
 }
