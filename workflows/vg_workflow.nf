@@ -13,20 +13,42 @@ include { BCFTOOLS_CONCAT } from '../modules/nf-core/bcftools/concat/main'
 include { BCFTOOLS_MERGE } from '../modules/nf-core/bcftools/merge/main'
 include { BCFTOOLS_NORM } from '../modules/nf-core/bcftools/norm/main'
 include { VG_PATHS } from '../modules/local/vg/paths/main'
-include { TABIX_TABIX } from '../modules/nf-core/tabix/tabix/main'
-
+include { TABIX_TABIX as TABIX_TABIX_1} from '../modules/nf-core/tabix/tabix/main'
+include { TABIX_TABIX as TABIX_TABIX_2} from '../modules/nf-core/tabix/tabix/main'
+include { SAMTOOLS_FAIDX } from '../modules/nf-core/samtools/faidx/main'
+include { VG_STATS } from '../modules/local/vg/stats/main'
 
 workflow VARIANT_GRAPH_WORKFLOW {
-
-
-    ch_vcf_tbi_insfasta = Channel.fromPath ( file(params.vcf) ).map { vcf -> 
-                tuple ([id:vcf.simpleName], vcf, file(params.tbi), []) }
 
     ch_fasta = Channel.fromPath ( file(params.fasta) ).map { genome -> 
                 tuple ([id:genome.simpleName], genome) }
 
-    ch_fai = Channel.fromPath ( file(params.fai) ).map { fai -> 
+    if (params.tbi) {
+    
+        ch_vcf_tbi_insfasta = Channel.fromPath ( file(params.vcf) ).map { vcf -> 
+                tuple ([id:vcf.simpleName], vcf, file(params.tbi), []) }
+    
+    } else {
+        
+        ch_vcf = Channel.fromPath( file(params.vcf) ).map { vcf -> 
+                tuple ([id:vcf.simpleName], vcf) }
+        
+        ch_tbi = TABIX_TABIX_1(ch_vcf).out.tbi
+
+        ch_vcf_tbi_insfasta = ch_vcf.join(ch_tbi, by:0).map {it[0],it[1],it[2],[]}
+    
+    }
+
+    if (params.fai) {
+        
+        ch_fai = Channel.fromPath ( file(params.fai) ).map { fai -> 
                 tuple ([id:fai.simpleName], fai) }
+    
+    } else {
+
+        SAMTOOLS_FAIDX ( ch_fasta, [[:],[]] )
+
+    }
 
     VG_CONSTRUCT ( ch_vcf_tbi_insfasta, ch_fasta, ch_fai )
 
@@ -40,6 +62,8 @@ workflow VARIANT_GRAPH_WORKFLOW {
     VG_GIRAFFE ( ch_fq, VG_AUTOINDEX.out.gbz.first(), VG_AUTOINDEX.out.min.first(), VG_AUTOINDEX.out.dist.first() )
 
     VG_FILTER ( VG_GIRAFFE.out.gam, VG_INDEX.out.xg.first() )
+
+    VG_STATS ( VG_FILTER.out.gam )
 
     //VG_AUGMENT ( VG_GIRAFFE.out.gam, vg )
 
@@ -69,7 +93,7 @@ workflow VARIANT_GRAPH_WORKFLOW {
 
     BCFTOOLS_MERGE ( ch_vcf_tbi )
 
-    TABIX_TABIX ( BCFTOOLS_MERGE.out.merged_variants )
+    TABIX_TABIX_2 ( BCFTOOLS_MERGE.out.merged_variants )
 
     if (params.normalize_variants) {
         VG_PATHS ( VG_CONSTRUCT.out.graph )
