@@ -14,9 +14,9 @@ process BCFTOOLS_VIEW {
     path(samples)
     each (fraction_missingness)
     each (minor_allele_count)
-    
+
     output:
-    tuple val(meta), path("*.gz") , emit: vcf
+    tuple val(meta), path("*.{vcf,vcf.gz,bcf,bcf.gz}") , emit: vcf
     path "versions.yml"           , emit: versions
 
     when:
@@ -24,17 +24,24 @@ process BCFTOOLS_VIEW {
 
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def prefix = task.ext.prefix ?: "${meta.id}" + '_' + "${meta.ref_id}" + '_' + "${fraction_missingness}" + '_' + "${minor_allele_count}"
     def regions_file  = regions ? "--regions-file ${regions}" : ""
     def targets_file = targets ? "--targets-file ${targets}" : ""
     def samples_file =  samples ? "--samples-file ${samples}" : ""
+    def extension = args.contains("--output-type b") || args.contains("-Ob") ? "bcf.gz" :
+                    args.contains("--output-type u") || args.contains("-Ou") ? "bcf" :
+                    args.contains("--output-type z") || args.contains("-Oz") ? "vcf.gz" :
+                    args.contains("--output-type v") || args.contains("-Ov") ? "vcf" :
+                    "vcf.gz"
+    def filter = "-i 'F_MISSING<${fraction_missingness} & MAC >= ${minor_allele_count} & QUAL>=10 & FORMAT/DP>3'"
     """
     bcftools view \\
-        --output ${prefix}.vcf.gz \\
+        --output ${prefix}.${extension} \\
         ${regions_file} \\
         ${targets_file} \\
         ${samples_file} \\
         $args \\
+        $filter \\
         --threads $task.cpus \\
         ${vcf}
 
@@ -47,7 +54,7 @@ process BCFTOOLS_VIEW {
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    touch ${prefix}.vcf.gz
+    touch ${prefix}.${extension}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
