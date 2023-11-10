@@ -40,6 +40,11 @@
             "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
             "installed_by": ["modules"]
           },
+          "freebayes": {
+            "branch": "master",
+            "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
+            "installed_by": ["modules"]
+          },
           "samtools/faidx": {
             "branch": "master",
             "git_sha": "fd742419940e01ba1c5ecb172c3e32ec840662fe",
@@ -52,7 +57,7 @@
           },
           "vg/construct": {
             "branch": "master",
-            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
             "installed_by": ["modules"]
           },
           "vg/index": {

@@ -1,5 +1,5 @@
 process VG_INDEX {
-    tag "$meta.id"
+    tag "$meta.region"
     label 'process_medium'
 
     conda "bioconda::vg=1.50.1"
@@ -20,7 +20,7 @@ process VG_INDEX {
 
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def prefix = task.ext.prefix ?: "${meta.region}"
 
     """
     vg index \\

@@ -1,6 +1,6 @@
-process VG_AUTOINDEX {
-    tag "$meta.region"
-    label 'process_high_memory'
+process VG_SURJECT {
+    tag "$meta.id"
+    label 'process_small'
     
     conda "bioconda::vg=1.50.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
@@ -8,28 +8,23 @@ process VG_AUTOINDEX {
         'biocontainers/vg:1.50.1--h9ee0642_0' }"
     
     input:
-    tuple val(meta), path(vcf), path(tbi), path(fasta), path(fai)
-    val type
+    tuple val(meta),  path(gam)
 
     output:
-    tuple val(meta), path("*.dist")       , emit: dist, optional: true
-    tuple val(meta), path("*.giraffe.gbz"), emit: gbz , optional: true
-    tuple val(meta), path("*.min")        , emit: min , optional: true    
-    path "versions.yml"                   , emit: versions
+    tuple val(meta), path("*.bam"), emit: snarls
+    path "versions.yml"           , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
     
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.region}"
+    def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    vg autoindex \\
-        --threads ${task.cpus} \\
-        --workflow ${type} \\
-        --prefix ${prefix} \\
-        --ref-fasta ${fasta} \\
-        --vcf ${vcf}
+    vg surgect \\
+        -x ${xg} \\
+        -b ${gam} \\
+        > ${prefix}.bam
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -40,7 +35,7 @@ process VG_AUTOINDEX {
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    touch ${prefix}.min
+    touch ${prefix}.stats
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

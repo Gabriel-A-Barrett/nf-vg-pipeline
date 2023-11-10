@@ -3,3 +3,8 @@ work
 VG
 BCFTOOLS
 TABIX
+FILTER*
+variant_calling*
+RADSEQ*
+STAT*
+TABIX*

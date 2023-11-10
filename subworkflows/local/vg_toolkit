@@ -13,20 +13,27 @@ include { BCFTOOLS_CONCAT } from '../../modules/nf-core/bcftools/concat/main'
 include { BCFTOOLS_MERGE } from '../../modules/nf-core/bcftools/merge/main'
 include { BCFTOOLS_NORM } from '../../modules/nf-core/bcftools/norm/main'
 include { VG_PATHS } from '../../modules/local/vg/paths/main'
+include { TABIX_TABIX } from '../../modules/nf-core/tabix/tabix/main'
 include { TABIX_TABIX as TABIX_TABIX_1} from '../../modules/nf-core/tabix/tabix/main'
+include { TABIX_SUBSET } from '../../modules/local/tabix/tabix/main'
 include { TABIX_TABIX as TABIX_TABIX_2} from '../../modules/nf-core/tabix/tabix/main'
 include { SAMTOOLS_FAIDX } from '../../modules/nf-core/samtools/faidx/main'
 include { VG_STATS } from '../../modules/local/vg/stats/main'
+include { VG_SURJECT } from '../../modules/local/vg/surject/main'
+include { FREEBAYES } from '../../modules/nf-core/freebayes/main'
 
 workflow VG_TOOLKIT {
 
+
+    // Reference Genome
     ch_fasta = Channel.fromPath ( file(params.fasta) ).map { genome -> 
                 tuple ([id:genome.simpleName], genome) }
 
+    // Switches for using params index or build one in nextflow
     if (params.tbi) {
     
-        ch_vcf_tbi_insfasta = Channel.fromPath ( file(params.vcf) ).map { vcf -> 
-                tuple ([id:vcf.simpleName], vcf, file(params.tbi), []) }
+        ch_vcf_tbi = Channel.fromPath ( file(params.vcf) ).map { vcf -> 
+                tuple ([id:vcf.simpleName], vcf, file(params.tbi)) }
     
     } else {
         
@@ -35,10 +42,9 @@ workflow VG_TOOLKIT {
         
         ch_tbi = TABIX_TABIX_1(ch_vcf).out.tbi
 
-        ch_vcf_tbi_insfasta = ch_vcf.join(ch_tbi, by:0).map {it[0],it[1],it[2],[]}
+        ch_vcf_tbi = ch_vcf.join(ch_tbi, by:0).map {it[0],it[1],it[2]}
     
     }
-
     if (params.fai) {
         
         ch_fai = Channel.fromPath ( file(params.fai) ).map { fai -> 
@@ -46,26 +52,52 @@ workflow VG_TOOLKIT {
     
     } else {
 
-        SAMTOOLS_FAIDX ( ch_fasta, [[:],[]] )
+        ch_fai = SAMTOOLS_FAIDX ( ch_fasta, [[:],[]] ).out.fai
 
     }
 
-    VG_CONSTRUCT ( ch_vcf_tbi_insfasta, ch_fasta, ch_fai )
+    // -----------------------------------------------------------------
+    // Create Channel with List of Chromosomes (Scaffolds/Contigs)
+    // 
+    ch_fai.map{it[1]}.splitCsv(sep:'\t').map{it[0]}.set{contig}
+
+    // subset vcf to contain specific regions
+    TABIX_SUBSET ( ch_vcf_tbi, contig )
+
+    // Augment Channel to include meta.region
+    ch_subset_vcf = TABIX_SUBSET.out.vcf.map { meta, vcf ->
+            WorkflowVG.createMetaMap(meta, vcf)
+        }
+
+    TABIX_TABIX ( ch_subset_vcf )
+
+    ch_vcf_tbi_insfasta = ch_subset_vcf.join( TABIX_TABIX.out.tbi ).map { meta, vcf, tbi -> [meta, vcf, tbi, []] }
+
+    VG_CONSTRUCT ( ch_vcf_tbi_insfasta, ch_fasta, ch_fai, contig )
 
     VG_INDEX ( VG_CONSTRUCT.out.graph )
 
-    VG_AUTOINDEX ( ch_vcf_tbi_insfasta, ch_fasta, ch_fai, 'giraffe' )
+    ch_vcf_tbi_fasta_fai = ch_vcf_tbi_insfasta.map{meta, vcf, tbi, insfasta -> [meta, vcf, tbi]}
+        .combine(ch_fasta.map{it[1]})
+        .combine(ch_fai.map{it[1]})
 
-    ch_fq = Channel.fromFilePairs(params.fq).map {id, fq ->
-                tuple ([id:fq[0].simpleName], fq)}
+    VG_AUTOINDEX ( ch_vcf_tbi_fasta_fai, 'giraffe' )
+
+    ch_gbz_min_dist = VG_AUTOINDEX.out.gbz
+        .join(VG_AUTOINDEX.out.min, by: 0)
+        .join(VG_AUTOINDEX.out.dist, by: 0)
+        .map{meta, gbz, min, dist -> [gbz, min, dist]}
+
+    // now create fastq channel for alignment using giraffe
+    ch_fq = Channel.fromFilePairs(params.fq).map { id, fq ->
+                tuple ([id:fq[0].simpleName], fq)
+                }.combine(ch_gbz_min_dist).view()
     
-    VG_GIRAFFE ( ch_fq, VG_AUTOINDEX.out.gbz.first(), VG_AUTOINDEX.out.min.first(), VG_AUTOINDEX.out.dist.first() )
+    VG_GIRAFFE ( ch_fq )
 
     VG_FILTER ( VG_GIRAFFE.out.gam, VG_INDEX.out.xg.first() )
 
     VG_STATS ( VG_FILTER.out.gam )
-
-    //VG_AUGMENT ( VG_GIRAFFE.out.gam, vg )
 
     VG_SNARLS ( VG_INDEX.out.xg )
 
@@ -75,6 +107,14 @@ workflow VG_TOOLKIT {
     // call indv. genotypes
     VG_CALL ( VG_PACK.out.pack, VG_AUTOINDEX.out.gbz.first(), VG_SNARLS.out.snarls.first() )
     
+    if (params.enable_freebayes) {
+        VG_SURJECT ( VG_GIRAFFE.out.gam )
+
+        SAMTOOLS_MERGE ( all_bam_files )
+
+        ch_freebayes = FREEBAYES ( merged_bam_bai_bed_fasta_fai ).out.vcf
+    }
+
     BCFTOOLS_SORT ( VG_CALL.out.vcf )
 
     BCFTOOLS_REHEADER ( BCFTOOLS_SORT.out.vcf )

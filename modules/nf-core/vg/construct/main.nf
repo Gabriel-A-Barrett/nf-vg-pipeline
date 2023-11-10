@@ -1,16 +1,17 @@
 process VG_CONSTRUCT {
-    tag "$meta.id"
+    tag "$region"
     label 'process_medium'
-    
-    conda "bioconda::vg=1.50.1"
+
+    conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/vg:1.50.1--h9ee0642_0':
-        'biocontainers/vg:1.50.1--h9ee0642_0' }"
+        'https://depot.galaxyproject.org/singularity/vg:1.45.0--h9ee0642_0':
+        'biocontainers/vg:1.45.0--h9ee0642_0' }"
 
     input:
     tuple val(meta), path(input), path(tbis), path(insertions_fasta)
     tuple val(meta2), path(fasta)
     tuple val(meta3), path(fasta_fai)
+    each (region)
 
     output:
     tuple val(meta), path("*.vg") , emit: graph
@@ -30,6 +31,8 @@ process VG_CONSTRUCT {
 
     insertions = insertions_fasta ? "--insertions ${insertions_fasta}" : ""
 
+    region = task.ext.region ?: "$region"
+
     """
     vg construct \\
         ${args} \\
@@ -37,7 +40,8 @@ process VG_CONSTRUCT {
         ${reference} \\
         ${input_files} \\
         ${insertions} \\
-        > ${prefix}.vg
+        -C -R ${region} \\
+        > ${prefix}_${region}.vg
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -47,6 +51,8 @@ process VG_CONSTRUCT {
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
+
+
     """
     touch ${prefix}.vg
 

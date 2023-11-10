@@ -8,10 +8,7 @@ process VG_GIRAFFE {
         'biocontainers/vg:1.50.1--h9ee0642_0' }"
     
     input:
-    tuple val(meta),  path(fq)
-    tuple val(meta2), path(gbz)
-    tuple val(meta3), path(min)
-    tuple val(meta4), path(dist)
+    tuple val(meta), path(fq), path(gbz), path(min), path(dist)
 
     output:
     tuple val(meta), path("*.gam"), emit: gam, optional: true
