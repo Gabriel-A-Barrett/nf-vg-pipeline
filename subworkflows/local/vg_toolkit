@@ -23,12 +23,23 @@ include { VG_SURJECT } from '../../modules/local/vg/surject/main'
 include { FREEBAYES } from '../../modules/nf-core/freebayes/main'
 include { SAMTOOLS_MERGE } from '../../modules/nf-core/samtools/merge/main'
 include { SAMTOOLS_INDEX } from '../../modules/nf-core/samtools/index/main'
+include { GUNZIP } from '../../modules/nf-core/gunzip/main'
 
 workflow VG_TOOLKIT {
 
+    ch_ref = Channel.fromPath ( file(params.fasta) ).map { genome -> 
+                    tuple ([id:genome.simpleName], genome) }
+
     // Reference Genome
-    ch_fasta = Channel.fromPath ( file(params.fasta) ).map { genome -> 
-                tuple ([id:genome.simpleName], genome) }
+    if ( params.fasta.endsWith('.gz') )
+
+        ch_fasta = GUNZIP ( ch_ref ).gunzip
+    
+    else {
+
+        ch_fasta = ch_ref
+
+    }
 
     // Switches for using params index or build one in nextflow
     if (params.tbi) {
@@ -40,7 +51,7 @@ workflow VG_TOOLKIT {
         
         ch_vcf = Channel.fromPath( file(params.vcf) ).map { vcf -> 
                 tuple ([id:vcf.simpleName], vcf) }
-        
+
         ch_tbi = TABIX_TABIX_1(ch_vcf).out.tbi
 
         ch_vcf_tbi = ch_vcf.join(ch_tbi, by:0).map {it[0],it[1],it[2]}
