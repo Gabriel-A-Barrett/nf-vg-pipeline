@@ -21,9 +21,10 @@ include { SAMTOOLS_FAIDX } from '../../modules/nf-core/samtools/faidx/main'
 include { VG_STATS } from '../../modules/local/vg/stats/main'
 include { VG_SURJECT } from '../../modules/local/vg/surject/main'
 include { FREEBAYES } from '../../modules/nf-core/freebayes/main'
+include { SAMTOOLS_MERGE } from '../../modules/nf-core/samtools/merge/main'
+include { SAMTOOLS_INDEX } from '../../modules/nf-core/samtools/index/main'
 
 workflow VG_TOOLKIT {
-
 
     // Reference Genome
     ch_fasta = Channel.fromPath ( file(params.fasta) ).map { genome -> 
@@ -68,6 +69,8 @@ workflow VG_TOOLKIT {
     ch_subset_vcf = TABIX_SUBSET.out.vcf.map { meta, vcf ->
             WorkflowVG.createMetaMap(meta, vcf)
         }
+    // split and captured meta.region for identifying. maintain meta.region here avoids .tokenize('_')
+    //////////////
 
     TABIX_TABIX ( ch_subset_vcf )
 
@@ -86,33 +89,59 @@ workflow VG_TOOLKIT {
     ch_gbz_min_dist = VG_AUTOINDEX.out.gbz
         .join(VG_AUTOINDEX.out.min, by: 0)
         .join(VG_AUTOINDEX.out.dist, by: 0)
-        .map{meta, gbz, min, dist -> [gbz, min, dist]}
 
     // now create fastq channel for alignment using giraffe
     ch_fq = Channel.fromFilePairs(params.fq).map { id, fq ->
                 tuple ([id:fq[0].simpleName], fq)
-                }.combine(ch_gbz_min_dist).view()
+                // multiples fastq files by number of contigs
+                }.combine(ch_gbz_min_dist)
+                .map { meta, fq_files, meta2, gbz, min, dist -> 
+                    metaf = [:]
+                    metaf.id = meta.id + '_' + meta2.region
+                    metaf.region = meta2.region
+
+                    return [ metaf, fq_files, gbz, min, dist ]
+                }
     
     VG_GIRAFFE ( ch_fq )
 
-    VG_FILTER ( VG_GIRAFFE.out.gam, VG_INDEX.out.xg.first() )
+    //VG_FILTER ( VG_GIRAFFE.out.gam, VG_INDEX.out.xg.first() )
 
-    VG_STATS ( VG_FILTER.out.gam )
+    VG_STATS ( VG_GIRAFFE.out.gam )
+
+    // check the number of reads
 
     VG_SNARLS ( VG_INDEX.out.xg )
 
     // pre-compute gt support
-    VG_PACK ( VG_FILTER.out.gam, VG_AUTOINDEX.out.gbz.first() )
+    VG_PACK ( VG_GIRAFFE.out.gam, VG_AUTOINDEX.out.gbz.first() )
 
     // call indv. genotypes
     VG_CALL ( VG_PACK.out.pack, VG_AUTOINDEX.out.gbz.first(), VG_SNARLS.out.snarls.first() )
     
     if (params.enable_freebayes) {
-        VG_SURJECT ( VG_GIRAFFE.out.gam )
 
-        SAMTOOLS_MERGE ( all_bam_files )
+        ch_gam_xg = VG_GIRAFFE.out.gam.join(VG_INDEX.out.xg, by: 0).view()
 
-        ch_freebayes = FREEBAYES ( merged_bam_bai_bed_fasta_fai ).out.vcf
+        VG_SURJECT ( ch_gam_xg )
+
+        // prune numbers for matching text
+        ch_bam_to_merge = VG_SURJECT.out.bam.map { meta, bam ->
+            metaf = [:]
+            metaf.id = meta.id.split(/[^\p{L}]/)[0]
+            metaf.region = meta.region
+
+            return [ metaf, bam ]
+        }.groupTuple()
+
+        SAMTOOLS_MERGE ( ch_bam_to_merge, ch_fasta, ch_fai )
+
+        SAMTOOLS_INDEX ( SAMTOOLS_MERGE.out.bam )
+
+        ch_bam_bai_bed_fasta_fai = SAMTOOLS_MERGE.out.bam
+            .join(SAMTOOLS_INDEX.out.bai, by: 0).view()
+
+        //ch_freebayes = FREEBAYES ( merged_bam_bai_bed_fasta_fai ).out.vcf
     }
 
     BCFTOOLS_SORT ( VG_CALL.out.vcf )
