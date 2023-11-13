@@ -116,23 +116,55 @@ workflow VG_TOOLKIT {
     
     VG_GIRAFFE ( ch_fq )
 
-    //VG_FILTER ( VG_GIRAFFE.out.gam, VG_INDEX.out.xg.first() )
+    ch_gam_to_join = VG_GIRAFFE.out.gam.map { meta, gam -> 
+        metaf = [:]
+        metaf.region = meta.region
+        return [ metaf, gam ]
+    }
 
-    VG_STATS ( VG_GIRAFFE.out.gam )
+    ch_xg_to_join = VG_INDEX.out.xg.map { meta, xg -> 
+        metaf = [:]
+        metaf.region = meta.region
+        return [ metaf, xg ]
+    }
+
+    ch_gam_xg = ch_gam_to_join.join(ch_xg_to_join).map { meta, gam, xg -> 
+        metaf = [:]
+        metaf.id = gam.simpleName
+        metaf.region = meta.region
+        return [ metaf, gam, xg ]
+    }
+
+    VG_FILTER ( ch_gam_xg )
+
+    VG_STATS ( VG_FILTER.out.gam )
 
     // check the number of reads
 
     VG_SNARLS ( VG_INDEX.out.xg )
 
     // pre-compute gt support
-    VG_PACK ( VG_GIRAFFE.out.gam, VG_AUTOINDEX.out.gbz.first() )
+    VG_PACK ( VG_FILTER.out.gam, VG_AUTOINDEX.out.gbz.first() )
 
     // call indv. genotypes
     VG_CALL ( VG_PACK.out.pack, VG_AUTOINDEX.out.gbz.first(), VG_SNARLS.out.snarls.first() )
     
     if (params.enable_freebayes) {
 
-        ch_gam_xg = VG_GIRAFFE.out.gam.join(VG_INDEX.out.xg, by: 0).view()
+        // encounter instance where reference meta.id doesn't match individual meta.id but meta.region match
+        ch_metaf_gam = VG_FILTER.out.gam.map{ meta, gam ->  
+            metaf = [:]
+            metaf.region = meta.region
+            return [ metaf, gam ] 
+            }
+
+        ch_metaf_xg  = VG_INDEX.out.xg.map{ meta, xg ->
+            metaf = [:]
+            metaf.region = meta.region
+            return [ metaf, xg ]
+         }
+        
+        ch_gam_xg = ch_metaf_gam.join(ch_metaf_xg, by: 0)
 
         VG_SURJECT ( ch_gam_xg )
 
@@ -163,13 +195,13 @@ workflow VG_TOOLKIT {
 
     // rewrite meta.id based on letters before number for grouping
     ch_vcf_tbi = BCFTOOLS_REHEADER.out.vcf
-    .join( BCFTOOLS_INDEX.out.tbi )
+    .join( BCFTOOLS_INDEX.out.tbi, by:0 )
     .map { meta, vcf, tbi ->
         def metaG = [:]
         metaG.id = meta.id.split(/[^\p{L}]/)[0]
         [[ id:metaG.id ], vcf, tbi ]
     }
-    .groupTuple(by:0)
+    .groupTuple(by:0).view()
 
     BCFTOOLS_MERGE ( ch_vcf_tbi )
 
