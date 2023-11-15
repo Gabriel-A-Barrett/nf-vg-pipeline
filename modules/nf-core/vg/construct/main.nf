@@ -8,10 +8,7 @@ process VG_CONSTRUCT {
         'biocontainers/vg:1.45.0--h9ee0642_0' }"
 
     input:
-    tuple val(meta), path(input), path(tbis), path(insertions_fasta)
-    tuple val(meta2), path(fasta)
-    tuple val(meta3), path(fasta_fai)
-    each (region)
+    tuple val(meta), path(input), path(tbis), path(insertions_fasta), path(fasta), path(fasta_fai)
 
     output:
     tuple val(meta), path("*.vg") , emit: graph
@@ -31,7 +28,7 @@ process VG_CONSTRUCT {
 
     insertions = insertions_fasta ? "--insertions ${insertions_fasta}" : ""
 
-    region = task.ext.region ?: "$region"
+    region = task.ext.region ?: "$meta.region"
 
     """
     vg construct \\

@@ -8,7 +8,7 @@ process VG_PATHS {
         'biocontainers/vg:1.50.1--h9ee0642_0' }"
     
     input:
-    tuple val(meta),  path(graph)
+    tuple val(meta), path(graph)
 
     output:
     tuple val(meta), path("*.fasta"), emit: fasta, optional: true
@@ -19,7 +19,7 @@ process VG_PATHS {
     
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def prefix = task.ext.prefix ?: "${meta.id}" + '_' + "${meta.region}"
     def extension = args.contains("-F") || args.contains("--extract-fasta") ? "fasta" : ''
     """
     vg paths \\

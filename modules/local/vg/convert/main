@@ -1,6 +1,6 @@
-process VG_SURJECT {
+process VG_CONVERT {
     tag "$meta.id"
-    label 'process_small'
+    label 'process_medium'
     
     conda "bioconda::vg=1.50.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
@@ -8,10 +8,10 @@ process VG_SURJECT {
         'biocontainers/vg:1.50.1--h9ee0642_0' }"
     
     input:
-    tuple val(meta), path(gam), path(xg)
+    tuple val(meta), path(graph)
 
     output:
-    tuple val(meta), path("*.bam"), emit: bam
+    tuple val(meta), path("*.xg") , emit: xg, optional: true
     path "versions.yml"           , emit: versions
 
     when:
@@ -21,10 +21,11 @@ process VG_SURJECT {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    vg surject \\
-        -x ${xg} \\
-        -b ${gam} \\
-        > ${prefix}.bam
+    vg convert \\
+        ${graph} \\
+        -x \\
+        ${args} \\
+        > ${prefix}.xg
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -35,7 +36,7 @@ process VG_SURJECT {
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    touch ${prefix}.stats
+    touch ${prefix}.gam
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

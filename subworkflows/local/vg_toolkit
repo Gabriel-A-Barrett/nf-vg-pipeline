@@ -6,8 +6,10 @@ include { VG_FILTER } from '../../modules/local/vg/filter/main.nf'
 include { VG_PACK } from '../../modules/local/vg/pack/main.nf'
 include { VG_SNARLS } from '../../modules/local/vg/snarls/main.nf'
 include { VG_CALL } from '../../modules/local/vg/call/main.nf'
-include { BCFTOOLS_SORT } from '../../modules/nf-core/bcftools/sort/main'
-include { BCFTOOLS_INDEX } from '../../modules/nf-core/bcftools/index/main'
+include { BCFTOOLS_SORT as BCFTOOLS_SORT1 } from '../../modules/nf-core/bcftools/sort/main'
+include { BCFTOOLS_SORT as BCFTOOLS_SORT2 } from '../../modules/nf-core/bcftools/sort/main'
+include { BCFTOOLS_INDEX as BCFTOOLS_INDEX1 } from '../../modules/nf-core/bcftools/index/main'
+include { BCFTOOLS_INDEX as BCFTOOLS_INDEX2 } from '../../modules/nf-core/bcftools/index/main'
 include { BCFTOOLS_REHEADER } from '../../modules/nf-core/bcftools/reheader/main'
 include { BCFTOOLS_CONCAT } from '../../modules/nf-core/bcftools/concat/main'
 include { BCFTOOLS_MERGE } from '../../modules/nf-core/bcftools/merge/main'
@@ -17,6 +19,7 @@ include { TABIX_TABIX } from '../../modules/nf-core/tabix/tabix/main'
 include { TABIX_TABIX as TABIX_TABIX_1} from '../../modules/nf-core/tabix/tabix/main'
 include { TABIX_SUBSET } from '../../modules/local/tabix/tabix/main'
 include { TABIX_TABIX as TABIX_TABIX_2} from '../../modules/nf-core/tabix/tabix/main'
+include { TABIX_TABIX as TABIX_TABIX_3} from '../../modules/nf-core/tabix/tabix/main'
 include { SAMTOOLS_FAIDX } from '../../modules/nf-core/samtools/faidx/main'
 include { VG_STATS } from '../../modules/local/vg/stats/main'
 include { VG_SURJECT } from '../../modules/local/vg/surject/main'
@@ -24,6 +27,9 @@ include { FREEBAYES } from '../../modules/nf-core/freebayes/main'
 include { SAMTOOLS_MERGE } from '../../modules/nf-core/samtools/merge/main'
 include { SAMTOOLS_INDEX } from '../../modules/nf-core/samtools/index/main'
 include { GUNZIP } from '../../modules/nf-core/gunzip/main'
+include { VG_CONVERT } from '../../modules/local/vg/convert/main'
+include { SAMTOOLS_SORT } from '../../modules/nf-core/samtools/sort/main'
+include { COMBINE_FASTA_FILES } from '../../modules/local/combine_fasta/main'
 
 workflow VG_TOOLKIT {
 
@@ -78,24 +84,30 @@ workflow VG_TOOLKIT {
 
     // Augment Channel to include meta.region
     ch_subset_vcf = TABIX_SUBSET.out.vcf.map { meta, vcf ->
-            WorkflowVG.createMetaMap(meta, vcf)
+            metaf = [:]
+            metaf.id = meta.id
+            metaf.region = vcf.name.toString().tokenize('.')[0].tokenize('_')[-1]
+            return [ metaf, vcf ]
         }
     // split and captured meta.region for identifying. maintain meta.region here avoids .tokenize('_')
     //////////////
 
     TABIX_TABIX ( ch_subset_vcf )
 
-    ch_vcf_tbi_insfasta = ch_subset_vcf.join( TABIX_TABIX.out.tbi ).map { meta, vcf, tbi -> [meta, vcf, tbi, []] }
-
-    VG_CONSTRUCT ( ch_vcf_tbi_insfasta, ch_fasta, ch_fai, contig )
-
-    VG_INDEX ( VG_CONSTRUCT.out.graph )
-
-    ch_vcf_tbi_fasta_fai = ch_vcf_tbi_insfasta.map{meta, vcf, tbi, insfasta -> [meta, vcf, tbi]}
+    ch_vcf_tbi_insfasta_fasta_fai = ch_subset_vcf.combine( TABIX_TABIX.out.tbi, by:0 )
+        .map { meta, vcf, tbi -> [meta, vcf, tbi, []] }
         .combine(ch_fasta.map{it[1]})
         .combine(ch_fai.map{it[1]})
 
+    VG_CONSTRUCT ( ch_vcf_tbi_insfasta_fasta_fai )
+
+    VG_INDEX ( VG_CONSTRUCT.out.graph )
+
+    ch_vcf_tbi_fasta_fai = ch_vcf_tbi_insfasta_fasta_fai.map{meta, vcf, tbi, insfasta, fasta, fai -> [meta, vcf, tbi, fasta, fai]}
+
     VG_AUTOINDEX ( ch_vcf_tbi_fasta_fai, 'giraffe' )
+
+    VG_CONVERT ( VG_AUTOINDEX.out.gbz )
 
     ch_gbz_min_dist = VG_AUTOINDEX.out.gbz
         .join(VG_AUTOINDEX.out.min, by: 0)
@@ -122,99 +134,166 @@ workflow VG_TOOLKIT {
         return [ metaf, gam ]
     }
 
-    ch_xg_to_join = VG_INDEX.out.xg.map { meta, xg -> 
+    ch_xg_to_join = VG_CONVERT.out.xg.map { meta, xg -> 
         metaf = [:]
         metaf.region = meta.region
         return [ metaf, xg ]
     }
 
-    ch_gam_xg = ch_gam_to_join.join(ch_xg_to_join).map { meta, gam, xg -> 
+    ch_gam_xg = ch_gam_to_join.combine(ch_xg_to_join, by: 0).map { meta, gam, xg -> 
         metaf = [:]
         metaf.id = gam.simpleName
         metaf.region = meta.region
         return [ metaf, gam, xg ]
     }
 
-    VG_FILTER ( ch_gam_xg )
+    //VG_FILTER ( ch_gam_xg )
 
-    VG_STATS ( VG_FILTER.out.gam )
+    VG_STATS ( VG_GIRAFFE.out.gam )
 
     // check the number of reads
 
     VG_SNARLS ( VG_INDEX.out.xg )
 
     // pre-compute gt support
-    VG_PACK ( VG_FILTER.out.gam, VG_AUTOINDEX.out.gbz.first() )
+    VG_PACK ( VG_GIRAFFE.out.gam, VG_AUTOINDEX.out.gbz.first() )
 
     // call indv. genotypes
     VG_CALL ( VG_PACK.out.pack, VG_AUTOINDEX.out.gbz.first(), VG_SNARLS.out.snarls.first() )
     
+    //
+    // FREEBAYES
+    //
     if (params.enable_freebayes) {
 
-        // encounter instance where reference meta.id doesn't match individual meta.id but meta.region match
-        ch_metaf_gam = VG_FILTER.out.gam.map{ meta, gam ->  
-            metaf = [:]
-            metaf.region = meta.region
-            return [ metaf, gam ] 
-            }
-
-        ch_metaf_xg  = VG_INDEX.out.xg.map{ meta, xg ->
-            metaf = [:]
-            metaf.region = meta.region
-            return [ metaf, xg ]
-         }
-        
-        ch_gam_xg = ch_metaf_gam.join(ch_metaf_xg, by: 0)
-
+        // convert gam into bam files
         VG_SURJECT ( ch_gam_xg )
 
-        // prune numbers for matching text
-        ch_bam_to_merge = VG_SURJECT.out.bam.map { meta, bam ->
+        // sort the files for indexing
+        SAMTOOLS_SORT ( VG_SURJECT.out.bam )
+
+        // deconstruct graph into fasta
+        VG_PATHS ( VG_CONSTRUCT.out.graph )
+
+        ch_fastas = VG_PATHS.out.fasta.map { meta, fasta ->
+            metaD = [:]
+            metaD.id = meta.id
+            [ metaD, fasta ]
+        }.groupTuple(by:0)
+
+        COMBINE_FASTA_FILES ( ch_fastas ).fasta
+
+        // index
+        SAMTOOLS_FAIDX ( VG_PATHS.out.fasta, [[:],[]] )
+
+        // combine fasta and fai
+        ch_fasta_fai = VG_PATHS.out.fasta.combine(SAMTOOLS_FAIDX.out.fai,by:0).map {meta, fasta, fai ->
             metaf = [:]
-            metaf.id = meta.id.split(/[^\p{L}]/)[0]
             metaf.region = meta.region
+            [ metaf, fasta, fai ]
+        }
 
-            return [ metaf, bam ]
-        }.groupTuple()
+        // remove id for grouping and combining based on chromosome
+        ch_bam_fasta_fai = SAMTOOLS_SORT.out.bam
+            .map { meta, bam ->
+                metaf = [:]
+                metaf.region = meta.region
 
-        SAMTOOLS_MERGE ( ch_bam_to_merge, ch_fasta, ch_fai )
+                return [ metaf, bam ]
+            }
+            .groupTuple(by:0)
+            .combine(ch_fasta_fai, by:0)
+            .map { meta, bam, fasta, fai ->
+                metaf = [:]
+                metaf.id = bam[0].getSimpleName().split(/[^\p{L}]/)[0]
+                metaf.region = meta.region
+
+                return [ metaf, bam, fasta, fai ]
+            }
+
+        SAMTOOLS_MERGE ( ch_bam_fasta_fai )
 
         SAMTOOLS_INDEX ( SAMTOOLS_MERGE.out.bam )
 
+        // combine merged bam, index, fasta, fai and add meta.region for freebayes region
         ch_bam_bai_bed_fasta_fai = SAMTOOLS_MERGE.out.bam
-            .join(SAMTOOLS_INDEX.out.bai, by: 0).view()
+            .combine(SAMTOOLS_INDEX.out.bai, by: 0)
+            .map { meta, bam, bai ->
+                metaf = [:]
+                metaf.region = meta.region
+                [ metaf, bam, bai ]
+            }
+            .combine(ch_fasta_fai, by: 0)
+            .map { meta, bam, bai, fasta, fai -> 
+                metaT = [:]
+                metaT.id = 'msp' + '_' + meta.region
+                metaT.region = meta.region
+                
+                [ metaT, bam, bai, meta.region, fasta, fai]
+            }
 
-        //ch_freebayes = FREEBAYES ( merged_bam_bai_bed_fasta_fai ).out.vcf
+        ch_freebayes = FREEBAYES ( ch_bam_bai_bed_fasta_fai, [], [], [] ).vcf
+
+        BCFTOOLS_SORT1 ( ch_freebayes )
+
+        BCFTOOLS_INDEX1 ( BCFTOOLS_SORT1.out.vcf )
+
+        ch_fbvcf_tbi = BCFTOOLS_SORT1.out.vcf
+            .join(BCFTOOLS_INDEX1.out.tbi, by: 0)
+            .map { meta, vcf, tbi ->
+                def metaG = [:]
+                metaG.id = meta.id.split(/[^\p{L}]/)[0]
+
+                [ metaG , vcf, tbi ]
+            }
+            .groupTuple(by:0)
+
+        BCFTOOLS_CONCAT ( ch_fbvcf_tbi )
+
+        ch_fb_vcf = BCFTOOLS_CONCAT.out.vcf.map { meta, vcf ->
+            def metaN = [:]
+            metaN.id = meta.id
+            metaN.variant_caller = 'freebayes'
+            
+            return [ metaN, vcf ]
+        }
+
+        TABIX_TABIX_3 ( ch_fb_vcf )
+
+        ch_fb_vcf_tbi = ch_fb_vcf.join ( TABIX_TABIX_3.out.tbi, by:0 )
+
     }
 
-    BCFTOOLS_SORT ( VG_CALL.out.vcf )
+    BCFTOOLS_SORT2 ( VG_CALL.out.vcf )
 
-    BCFTOOLS_REHEADER ( BCFTOOLS_SORT.out.vcf )
+    BCFTOOLS_REHEADER ( BCFTOOLS_SORT2.out.vcf )
 
-    BCFTOOLS_INDEX ( BCFTOOLS_REHEADER.out.vcf )
+    BCFTOOLS_INDEX2 ( BCFTOOLS_REHEADER.out.vcf )
 
     // rewrite meta.id based on letters before number for grouping
     ch_vcf_tbi = BCFTOOLS_REHEADER.out.vcf
-    .join( BCFTOOLS_INDEX.out.tbi, by:0 )
+    .join( BCFTOOLS_INDEX2.out.tbi, by:0 )
     .map { meta, vcf, tbi ->
         def metaG = [:]
         metaG.id = meta.id.split(/[^\p{L}]/)[0]
-        [[ id:metaG.id ], vcf, tbi ]
+        metaG.variant_caller = 'vg-call'
+
+        [ metaG , vcf, tbi ]
     }
-    .groupTuple(by:0).view()
+    .groupTuple(by:0)
 
     BCFTOOLS_MERGE ( ch_vcf_tbi )
 
     TABIX_TABIX_2 ( BCFTOOLS_MERGE.out.merged_variants )
 
     if (params.normalize_variants) {
-        VG_PATHS ( VG_CONSTRUCT.out.graph )
 
-        ch_vcf_tbi = BCFTOOLS_MERGE.out.merged_variants.join(TABIX_TABIX_2.out.tbi, by:0)
+        ch_all_vcf_tbi = BCFTOOLS_MERGE.out.merged_variants.join(TABIX_TABIX_2.out.tbi, by:0).mix( ch_fb_vcf_tbi )
 
-        BCFTOOLS_NORM ( ch_vcf_tbi, VG_PATHS.out.fasta )
+        BCFTOOLS_NORM ( ch_all_vcf_tbi, COMBINE_FASTA_FILES.out.fasta.first() )
     }
 
     emit:
     norm_vcf = BCFTOOLS_NORM.out.vcf
+
 }

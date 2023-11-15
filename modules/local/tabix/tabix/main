@@ -23,9 +23,9 @@ process TABIX_SUBSET {
     script:
     def prefix = meta.id ?: ''
     def args = task.ext.args ?: ''
-    def region = subset ?: ''
+    def region = subset 
     """
-    tabix $args $tab $region | bgzip -c > ${prefix}_${region}.vcf.gz
+    tabix $args $tab $region | bgzip -c > ${region}.vcf.gz
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
