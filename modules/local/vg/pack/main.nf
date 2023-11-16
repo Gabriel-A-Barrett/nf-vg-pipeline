@@ -1,6 +1,6 @@
 process VG_PACK {
     tag "$meta.id"
-    label 'process_medium'
+    label 'process_super'
     
     conda "bioconda::vg=1.50.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
