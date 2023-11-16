@@ -1,6 +1,6 @@
-process VG_PACK {
+process VG_MOD {
     tag "$meta.id"
-    label 'process_high'
+    label 'process_medium'
     
     conda "bioconda::vg=1.50.1"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
@@ -8,11 +8,10 @@ process VG_PACK {
         'biocontainers/vg:1.50.1--h9ee0642_0' }"
     
     input:
-    tuple val(meta), path(gam)
-    tuple val(meta2),  path(xg)
+    tuple val(meta), path(vg)
 
     output:
-    tuple val(meta), path("*.pack"), emit: pack, optional: true
+    tuple val(meta), path("*.vg"), emit: vg
     path "versions.yml"           , emit: versions
 
     when:
@@ -20,13 +19,12 @@ process VG_PACK {
     
     script:
     def args = task.ext.args ?: ''
-    def prefix = task.ext.prefix ?: "${meta.id}"
+    def prefix = task.ext.prefix ?: "${meta.id}" + '_' + "${meta.region}"
     """
-    vg pack \\
-        -x ${xg} \\
-        -g ${gam} \\
-        -o ${prefix}.pack \\
-        ${args}
+    vg mod \\
+        -X 32 \\
+        $vg \\
+        > ${prefix}_32bp.vg
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -37,7 +35,7 @@ process VG_PACK {
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    touch ${prefix}.gam
+    touch ${prefix}.stats
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
