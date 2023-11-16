@@ -147,16 +147,16 @@ workflow VG_TOOLKIT {
         return [ metaf, gam, xg ]
     }
 
-    //VG_FILTER ( ch_gam_xg )
+    VG_FILTER ( ch_gam_xg )
 
-    VG_STATS ( VG_GIRAFFE.out.gam )
+    VG_STATS ( VG_FILTER.out.gam )
 
     // check the number of reads
 
     VG_SNARLS ( VG_INDEX.out.xg )
 
     // pre-compute gt support
-    VG_PACK ( VG_GIRAFFE.out.gam, VG_AUTOINDEX.out.gbz.first() )
+    VG_PACK ( VG_FILTER.out.gam, VG_AUTOINDEX.out.gbz.first() )
 
     // call indv. genotypes
     VG_CALL ( VG_PACK.out.pack, VG_AUTOINDEX.out.gbz.first(), VG_SNARLS.out.snarls.first() )
