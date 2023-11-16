@@ -153,14 +153,45 @@ workflow VG_TOOLKIT {
 
     // check the number of reads
 
-    VG_SNARLS ( VG_INDEX.out.xg )
+    if (params.enable_vgcall) {
 
-    // pre-compute gt support
-    VG_PACK ( VG_FILTER.out.gam, VG_AUTOINDEX.out.gbz.first() )
+        VG_SNARLS ( VG_INDEX.out.xg )
 
-    // call indv. genotypes
-    VG_CALL ( VG_PACK.out.pack, VG_AUTOINDEX.out.gbz.first(), VG_SNARLS.out.snarls.first() )
+        // pre-compute gt support
+        VG_PACK ( VG_FILTER.out.gam, VG_AUTOINDEX.out.gbz.first() )
+
+        // call indv. genotypes
+        VG_CALL ( VG_PACK.out.pack, VG_AUTOINDEX.out.gbz.first(), VG_SNARLS.out.snarls.first() )
+        
+        BCFTOOLS_SORT2 ( VG_CALL.out.vcf )
+
+        BCFTOOLS_REHEADER ( BCFTOOLS_SORT2.out.vcf )
+
+        BCFTOOLS_INDEX2 ( BCFTOOLS_REHEADER.out.vcf )
+
+        // rewrite meta.id based on letters before number for grouping
+        ch_vcf_tbi = BCFTOOLS_REHEADER.out.vcf
+        .join( BCFTOOLS_INDEX2.out.tbi, by:0 )
+        .map { meta, vcf, tbi ->
+            def metaG = [:]
+            metaG.id = meta.id.split(/[^\p{L}]/)[0]
+            metaG.variant_caller = 'vg-call'
+
+            [ metaG , vcf, tbi ]
+        }
+        .groupTuple(by:0)
+
+        BCFTOOLS_MERGE ( ch_vcf_tbi )
+
+        TABIX_TABIX_2 ( BCFTOOLS_MERGE.out.merged_variants )
+
+        ch_vgcall_vcf_tbi = BCFTOOLS_MERGE.out.merged_variants.join(TABIX_TABIX_2.out.tbi, by:0)
+
+    } else {
+
+        ch_vgcall_vcf_tbi = Channel.empty() 
     
+    }
     //
     // FREEBAYES
     //
@@ -264,31 +295,9 @@ workflow VG_TOOLKIT {
 
     }
 
-    BCFTOOLS_SORT2 ( VG_CALL.out.vcf )
-
-    BCFTOOLS_REHEADER ( BCFTOOLS_SORT2.out.vcf )
-
-    BCFTOOLS_INDEX2 ( BCFTOOLS_REHEADER.out.vcf )
-
-    // rewrite meta.id based on letters before number for grouping
-    ch_vcf_tbi = BCFTOOLS_REHEADER.out.vcf
-    .join( BCFTOOLS_INDEX2.out.tbi, by:0 )
-    .map { meta, vcf, tbi ->
-        def metaG = [:]
-        metaG.id = meta.id.split(/[^\p{L}]/)[0]
-        metaG.variant_caller = 'vg-call'
-
-        [ metaG , vcf, tbi ]
-    }
-    .groupTuple(by:0)
-
-    BCFTOOLS_MERGE ( ch_vcf_tbi )
-
-    TABIX_TABIX_2 ( BCFTOOLS_MERGE.out.merged_variants )
-
     if (params.normalize_variants) {
 
-        ch_all_vcf_tbi = BCFTOOLS_MERGE.out.merged_variants.join(TABIX_TABIX_2.out.tbi, by:0).mix( ch_fb_vcf_tbi )
+        ch_all_vcf_tbi = ch_vgcall_vcf_tbi.mix( ch_fb_vcf_tbi )
 
         BCFTOOLS_NORM ( ch_all_vcf_tbi, COMBINE_FASTA_FILES.out.fasta.first() )
     }
