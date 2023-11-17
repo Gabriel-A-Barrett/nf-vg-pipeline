@@ -102,7 +102,7 @@ workflow VG_TOOLKIT {
     VG_CONSTRUCT ( ch_vcf_tbi_insfasta_fasta_fai )
 
     VG_INDEX ( VG_CONSTRUCT.out.graph )
-    
+
     ch_vcf_tbi_fasta_fai = ch_vcf_tbi_insfasta_fasta_fai.map{meta, vcf, tbi, insfasta, fasta, fai -> [meta, vcf, tbi, fasta, fai]}
 
     VG_AUTOINDEX ( ch_vcf_tbi_fasta_fai, 'giraffe' )
@@ -115,7 +115,7 @@ workflow VG_TOOLKIT {
 
     // now create fastq channel for alignment using giraffe
     ch_fq = Channel.fromFilePairs(params.fq).map { id, fq ->
-                tuple ([id:fq[0].simpleName], fq)
+                tuple ( [id:fq[0].simpleName], fq )
                 // multiples fastq files by number of contigs
                 }.combine(ch_gbz_min_dist)
                 .map { meta, fq_files, meta2, gbz, min, dist -> 
@@ -125,7 +125,7 @@ workflow VG_TOOLKIT {
 
                     return [ metaf, fq_files, gbz, min, dist ]
                 }
-    
+
     VG_GIRAFFE ( ch_fq )
 
     ch_gam_to_join = VG_GIRAFFE.out.gam.map { meta, gam -> 
@@ -144,15 +144,34 @@ workflow VG_TOOLKIT {
         metaf = [:]
         metaf.id = gam.simpleName
         metaf.region = meta.region
-        return [ metaf, gam, xg ]
+        return tuple( metaf, gam, xg )
     }
 
     VG_FILTER ( ch_gam_xg )
 
+    ch_filtered_gam = VG_FILTER.out.gam.map { meta, gam ->
+        metaD = [:]
+        metaD.region = meta.region
+        return [ metaD, gam ]
+    }
+    
+    ch_filtered_gam_xg = ch_filtered_gam.combine(ch_xg_to_join, by: 0).map { meta, gam, xg ->
+        metaD = [:]
+        metaD.id = gam.simpleName
+        metaD.region = meta.region
+        return [ metaD, gam, xg ]
+    }.view()
+
+    /*.combine(ch_xg_to_join, by: 0).map { meta, gam, xg -> 
+        metaD = [:]
+        metaD.id = gam.simpleName
+        metaD.region = meta.region
+        return [ metaD, gam, xg ]
+    }.view()*/
+
     VG_STATS ( VG_FILTER.out.gam )
 
     // check the number of reads
-
     if (params.enable_vgcall) {
 
         VG_SNARLS ( VG_INDEX.out.xg )

@@ -20,16 +20,11 @@ process VG_CONSTRUCT {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-
     def mode =  input instanceof ArrayList || input.toString().endsWith(".vcf.gz") ? 'vcf' : 'msa'
-
     input_files = mode == 'vcf' ? input.collect { "--vcf ${it}" }.join(" ") : "--msa ${input}"
     reference = mode == 'vcf' ? "--reference ${fasta}" : ""
-
     insertions = insertions_fasta ? "--insertions ${insertions_fasta}" : ""
-
     region = task.ext.region ?: "$meta.region"
-
     """
     vg construct \\
         ${args} \\
@@ -51,8 +46,6 @@ process VG_CONSTRUCT {
 
     stub:
     def prefix = task.ext.prefix ?: "${meta.id}"
-
-
     """
     touch ${prefix}.vg
 
