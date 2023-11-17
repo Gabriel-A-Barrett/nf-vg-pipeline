@@ -102,7 +102,7 @@ workflow VG_TOOLKIT {
     VG_CONSTRUCT ( ch_vcf_tbi_insfasta_fasta_fai )
 
     VG_INDEX ( VG_CONSTRUCT.out.graph )
-
+    
     ch_vcf_tbi_fasta_fai = ch_vcf_tbi_insfasta_fasta_fai.map{meta, vcf, tbi, insfasta, fasta, fai -> [meta, vcf, tbi, fasta, fai]}
 
     VG_AUTOINDEX ( ch_vcf_tbi_fasta_fai, 'giraffe' )

@@ -37,7 +37,10 @@ process VG_CONSTRUCT {
         ${reference} \\
         ${input_files} \\
         ${insertions} \\
-        -C -R ${region} \\
+        -C -R ${region} | \\
+        vg mod -X 32 - \\
+        vg mod -M 8 - \\
+        vg sort - \\
         > ${prefix}_${region}.vg
 
     cat <<-END_VERSIONS > versions.yml
