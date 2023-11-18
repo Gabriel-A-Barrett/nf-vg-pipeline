@@ -84,10 +84,10 @@ workflow VG_TOOLKIT {
     TABIX_SUBSET ( ch_vcf_tbi, contig )
 
     // Augment Channel to include meta.region
-    ch_subset_vcf = TABIX_SUBSET.out.vcf.map { meta, vcf ->
+    ch_subset_vcf = TABIX_SUBSET.out.vcf.map { meta, subset, vcf ->
             metaf = [:]
             metaf.id = meta.id
-            metaf.region = vcf.name.toString().tokenize('.')[0].tokenize('_')[-1]
+            metaf.region = subset
             return [ metaf, vcf ]
         }
     // split and captured meta.region for identifying. maintain meta.region here avoids .tokenize('_')

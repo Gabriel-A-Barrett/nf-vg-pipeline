@@ -12,9 +12,9 @@ process TABIX_SUBSET {
     each (subset)
 
     output:
-    tuple val(meta), path("*.tbi"), optional:true, emit: tbi
-    tuple val(meta), path("*.csi"), optional:true, emit: csi
-    tuple val(meta), path("*.vcf.gz"), optional:true, emit: vcf
+    tuple val(meta), val(subset), path("*.tbi"), optional:true, emit: tbi
+    tuple val(meta), val(subset), path("*.csi"), optional:true, emit: csi
+    tuple val(meta), val(subset), path("*.vcf.gz"), optional:true, emit: vcf
     path  "versions.yml"          , emit: versions
 
     when:
