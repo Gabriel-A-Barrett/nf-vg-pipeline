@@ -20,7 +20,8 @@ include { TABIX_TABIX as TABIX_TABIX_1} from '../../modules/nf-core/tabix/tabix/
 include { TABIX_SUBSET } from '../../modules/local/tabix/tabix/main'
 include { TABIX_TABIX as TABIX_TABIX_2} from '../../modules/nf-core/tabix/tabix/main'
 include { TABIX_TABIX as TABIX_TABIX_3} from '../../modules/nf-core/tabix/tabix/main'
-include { SAMTOOLS_FAIDX } from '../../modules/nf-core/samtools/faidx/main'
+include { SAMTOOLS_FAIDX as SAMTOOLS_FAIDX_1 } from '../../modules/nf-core/samtools/faidx/main'
+include { SAMTOOLS_FAIDX as SAMTOOLS_FAIDX_2 } from '../../modules/nf-core/samtools/faidx/main'
 include { VG_STATS } from '../../modules/local/vg/stats/main'
 include { VG_SURJECT } from '../../modules/local/vg/surject/main'
 include { FREEBAYES } from '../../modules/nf-core/freebayes/main'
@@ -70,7 +71,7 @@ workflow VG_TOOLKIT {
     
     } else {
 
-        ch_fai = SAMTOOLS_FAIDX ( ch_fasta, [[:],[]] ).fai
+        ch_fai = SAMTOOLS_FAIDX_1 ( ch_fasta, [[:],[]] ).fai
 
     }
 
@@ -234,10 +235,10 @@ workflow VG_TOOLKIT {
         COMBINE_FASTA_FILES ( ch_fastas ).fasta
 
         // index
-        SAMTOOLS_FAIDX ( VG_PATHS.out.fasta, [[:],[]] )
+        SAMTOOLS_FAIDX_2 ( VG_PATHS.out.fasta, [[:],[]] )
 
         // combine fasta and fai
-        ch_fasta_fai = VG_PATHS.out.fasta.combine(SAMTOOLS_FAIDX.out.fai,by:0).map {meta, fasta, fai ->
+        ch_fasta_fai = VG_PATHS.out.fasta.combine(SAMTOOLS_FAIDX_2.out.fai,by:0).map {meta, fasta, fai ->
             metaf = [:]
             metaf.region = meta.region
             [ metaf, fasta, fai ]
