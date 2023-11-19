@@ -20,6 +20,7 @@ process VG_GIRAFFE {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
+    def indv = "${meta.id.toString().tokenize('_')[0]}" + "${meta.id.toString().tokenize('_')[1]}"
     """
     vg giraffe \\
         --threads ${task.cpus} \\
@@ -28,6 +29,8 @@ process VG_GIRAFFE {
         -d ${dist} \\
         -f ${fq[0]} \\
         -f ${fq[1]} \\
+        -R $indv \\
+        -N $indv \\
         -p \\
         > ${prefix}.gam
     
