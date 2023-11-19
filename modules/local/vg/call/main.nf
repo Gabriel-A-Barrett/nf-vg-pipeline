@@ -8,9 +8,7 @@ process VG_CALL {
         'biocontainers/vg:1.50.1--h9ee0642_0' }"
     
     input:
-    tuple val(meta), path(pack)
-    tuple val(meta2), path(xg)
-    tuple val(meta2), path(snarls)
+    tuple val(meta), path(pack), path(xg), path(snarls)
 
     output:
     tuple val(meta), path("*.vcf"), emit: vcf

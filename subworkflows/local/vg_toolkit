@@ -177,11 +177,20 @@ workflow VG_TOOLKIT {
 
         VG_SNARLS ( VG_INDEX.out.xg )
 
+        ch_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }.view()
+        .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
+        .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
+
         // pre-compute gt support
-        VG_PACK ( VG_FILTER.out.gam, VG_AUTOINDEX.out.gbz.first() )
+        VG_PACK ( ch_gam_gbz )
+
+        ch_pack_gbz_snarls = VG_PACK.out.pack.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
+            .combine(VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by:0)
+            .combine(VG_SNARLS.out.snarls.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by:0)
+            .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }.view()
 
         // call indv. genotypes
-        VG_CALL ( VG_PACK.out.pack, VG_AUTOINDEX.out.gbz.first(), VG_SNARLS.out.snarls.first() )
+        VG_CALL ( ch_pack_gbz_snarls )
         
         BCFTOOLS_SORT2 ( VG_CALL.out.vcf )
 

@@ -3,12 +3,15 @@ import java.nio.file.Paths
 
 class WorkflowVG {
 
-    public static ArrayList createMetaMap(meta, path) {    
+    public static ArrayList removeIdFromGroovyMap(meta, path) {    
         def metaf = [:]
-        metaf.id = meta.id
-        metaf.region = path.name.toString().tokenize('.')[0].tokenize('_')[-1]
-
-        return [metaf, path]
-
+        metaf.region = meta.region
+        return [ metaf ] + path.flatten()
+    }
+    public static ArrayList insertIndvIdIntoChannel(meta, path) {    
+        def metaf = [:]
+        metaf.id = path[0].simpleName
+        metaf.region = meta.region
+        return [ metaf ] + path.flatten()
     }
 }

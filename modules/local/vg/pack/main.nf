@@ -8,8 +8,7 @@ process VG_PACK {
         'biocontainers/vg:1.50.1--h9ee0642_0' }"
     
     input:
-    tuple val(meta), path(gam)
-    tuple val(meta2),  path(xg)
+    tuple val(meta), path(gam), path(xg)
 
     output:
     tuple val(meta), path("*.pack"), emit: pack, optional: true
