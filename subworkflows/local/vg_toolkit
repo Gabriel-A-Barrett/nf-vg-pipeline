@@ -161,14 +161,7 @@ workflow VG_TOOLKIT {
         metaD.id = gam.simpleName
         metaD.region = meta.region
         return [ metaD, gam, xg ]
-    }.view()
-
-    /*.combine(ch_xg_to_join, by: 0).map { meta, gam, xg -> 
-        metaD = [:]
-        metaD.id = gam.simpleName
-        metaD.region = meta.region
-        return [ metaD, gam, xg ]
-    }.view()*/
+    }
 
     VG_STATS ( VG_FILTER.out.gam )
 
@@ -177,7 +170,7 @@ workflow VG_TOOLKIT {
 
         VG_SNARLS ( VG_INDEX.out.xg )
 
-        ch_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }.view()
+        ch_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
         .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
         .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
 
@@ -187,7 +180,7 @@ workflow VG_TOOLKIT {
         ch_pack_gbz_snarls = VG_PACK.out.pack.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
             .combine(VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by:0)
             .combine(VG_SNARLS.out.snarls.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by:0)
-            .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }.view()
+            .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
 
         // call indv. genotypes
         VG_CALL ( ch_pack_gbz_snarls )
