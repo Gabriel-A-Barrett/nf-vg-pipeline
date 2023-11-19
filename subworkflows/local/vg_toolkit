@@ -150,19 +150,10 @@ workflow VG_TOOLKIT {
 
     VG_FILTER ( ch_gam_xg )
 
-    ch_filtered_gam = VG_FILTER.out.gam.map { meta, gam ->
-        metaD = [:]
-        metaD.region = meta.region
-        return [ metaD, gam ]
-    }
+    ch_filtered_gam_gbz = VG_FILTER.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
+        .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
+        .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
     
-    ch_filtered_gam_xg = ch_filtered_gam.combine(ch_xg_to_join, by: 0).map { meta, gam, xg ->
-        metaD = [:]
-        metaD.id = gam.simpleName
-        metaD.region = meta.region
-        return [ metaD, gam, xg ]
-    }
-
     VG_STATS ( VG_FILTER.out.gam )
 
     // check the number of reads
@@ -170,12 +161,8 @@ workflow VG_TOOLKIT {
 
         VG_SNARLS ( VG_INDEX.out.xg )
 
-        ch_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
-        .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
-        .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
-
         // pre-compute gt support
-        VG_PACK ( ch_gam_gbz )
+        VG_PACK ( ch_filtered_gam_gbz )
 
         ch_pack_gbz_snarls = VG_PACK.out.pack.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
             .combine(VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by:0)
@@ -220,7 +207,7 @@ workflow VG_TOOLKIT {
     if (params.enable_freebayes) {
 
         // convert gam into bam files
-        VG_SURJECT ( ch_gam_xg )
+        VG_SURJECT ( ch_filtered_gam_gbz )
 
         // sort the files for indexing
         SAMTOOLS_SORT ( VG_SURJECT.out.bam )
