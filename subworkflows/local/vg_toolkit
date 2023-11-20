@@ -8,10 +8,13 @@ include { VG_SNARLS } from '../../modules/local/vg/snarls/main.nf'
 include { VG_CALL } from '../../modules/local/vg/call/main.nf'
 include { BCFTOOLS_SORT as BCFTOOLS_SORT1 } from '../../modules/nf-core/bcftools/sort/main'
 include { BCFTOOLS_SORT as BCFTOOLS_SORT2 } from '../../modules/nf-core/bcftools/sort/main'
+include { BCFTOOLS_SORT as BCFTOOLS_SORT3 } from '../../modules/nf-core/bcftools/sort/main'
 include { BCFTOOLS_INDEX as BCFTOOLS_INDEX1 } from '../../modules/nf-core/bcftools/index/main'
 include { BCFTOOLS_INDEX as BCFTOOLS_INDEX2 } from '../../modules/nf-core/bcftools/index/main'
+include { BCFTOOLS_INDEX as BCFTOOLS_INDEX3 } from '../../modules/nf-core/bcftools/index/main'
 include { BCFTOOLS_REHEADER } from '../../modules/nf-core/bcftools/reheader/main'
-include { BCFTOOLS_CONCAT } from '../../modules/nf-core/bcftools/concat/main'
+include { BCFTOOLS_CONCAT as BCFTOOLS_CONCAT_FREEBAYES } from '../../modules/nf-core/bcftools/concat/main'
+include { BCFTOOLS_CONCAT as BCFTOOLS_CONCAT_VG_CALL } from '../../modules/nf-core/bcftools/concat/main'
 include { BCFTOOLS_MERGE } from '../../modules/nf-core/bcftools/merge/main'
 include { BCFTOOLS_NORM } from '../../modules/nf-core/bcftools/norm/main'
 include { VG_PATHS } from '../../modules/local/vg/paths/main'
@@ -179,18 +182,34 @@ workflow VG_TOOLKIT {
         BCFTOOLS_INDEX2 ( BCFTOOLS_REHEADER.out.vcf )
 
         // rewrite meta.id based on letters before number for grouping
-        ch_vcf_tbi = BCFTOOLS_REHEADER.out.vcf
+        ch_indv_region_vcf_tbi = BCFTOOLS_REHEADER.out.vcf
         .join( BCFTOOLS_INDEX2.out.tbi, by:0 )
         .map { meta, vcf, tbi ->
             def metaG = [:]
-            metaG.id = meta.id.split(/[^\p{L}]/)[0]
-            metaG.variant_caller = 'vg-call'
+            metaG.id = meta.id.toString().tokenize('_')[0..1].join("_")
 
             [ metaG , vcf, tbi ]
         }
         .groupTuple(by:0)
 
-        BCFTOOLS_MERGE ( ch_vcf_tbi )
+        BCFTOOLS_CONCAT_VG_CALL ( ch_indv_region_vcf_tbi )
+
+        BCFTOOLS_SORT3 ( BCFTOOLS_CONCAT_VG_CALL.out.vcf )
+
+        BCFTOOLS_INDEX3 ( BCFTOOLS_SORT3.out.vcf )        
+
+        ch_indv_vcf_tbi = BCFTOOLS_SORT3.out.vcf
+            .join( BCFTOOLS_INDEX3.out.tbi, by:0 )
+            .map { meta, vcf, tbi ->
+            def metaG = [:]
+            metaG.id = meta.id.toString().split(/[^\p{L}]/)[0]
+            metaG.variant_caller = 'vg-call'
+
+            [ metaG , vcf, tbi ]
+        }
+        .groupTuple(by:0).view()
+
+        BCFTOOLS_MERGE ( ch_indv_vcf_tbi )
 
         TABIX_TABIX_2 ( BCFTOOLS_MERGE.out.merged_variants )
 
@@ -288,9 +307,9 @@ workflow VG_TOOLKIT {
             }
             .groupTuple(by:0)
 
-        BCFTOOLS_CONCAT ( ch_fbvcf_tbi )
+        BCFTOOLS_CONCAT_FREEBAYES ( ch_fbvcf_tbi )
 
-        ch_fb_vcf = BCFTOOLS_CONCAT.out.vcf.map { meta, vcf ->
+        ch_fb_vcf = BCFTOOLS_CONCAT_FREEBAYES.out.vcf.map { meta, vcf ->
             def metaN = [:]
             metaN.id = meta.id
             metaN.variant_caller = 'freebayes'

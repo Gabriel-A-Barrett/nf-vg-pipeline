@@ -20,7 +20,7 @@ process BCFTOOLS_REHEADER {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-
+    def sample = "${meta.id.toString().tokenize('_')[0..1].join('')}"
     def args2 = task.ext.args2 ?: '--output-type z'
     def extension = args2.contains("--output-type b") || args2.contains("-Ob") ? "bcf.gz" :
                     args2.contains("--output-type u") || args2.contains("-Ou") ? "bcf" :
@@ -28,7 +28,7 @@ process BCFTOOLS_REHEADER {
                     args2.contains("--output-type v") || args2.contains("-Ov") ? "vcf" :
                     "vcf"
     """
-    echo "SAMPLE ${prefix}" > new_sample_name.txt
+    echo "SAMPLE ${sample}" > new_sample_name.txt
     bcftools \\
         reheader \\
         $args \\
