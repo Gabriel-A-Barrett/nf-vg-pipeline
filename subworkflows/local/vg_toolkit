@@ -6,7 +6,7 @@ include { VG_FILTER } from '../../modules/local/vg/filter/main.nf'
 include { VG_PACK } from '../../modules/local/vg/pack/main.nf'
 include { VG_SNARLS } from '../../modules/local/vg/snarls/main.nf'
 include { VG_CALL } from '../../modules/local/vg/call/main.nf'
-include { BCFTOOLS_SORT as BCFTOOLS_SORT1 } from '../../modules/nf-core/bcftools/sort/main'
+include { BCFTOOLS_SORT as BCFTOOLS_SORT_SAMPLES } from '../../modules/local/bcftools/sort/main'
 include { BCFTOOLS_SORT as BCFTOOLS_SORT2 } from '../../modules/nf-core/bcftools/sort/main'
 include { BCFTOOLS_SORT as BCFTOOLS_SORT3 } from '../../modules/nf-core/bcftools/sort/main'
 include { BCFTOOLS_INDEX as BCFTOOLS_INDEX1 } from '../../modules/nf-core/bcftools/index/main'
@@ -162,7 +162,7 @@ workflow VG_TOOLKIT {
     // check the number of reads
     if (params.enable_vgcall) {
 
-        VG_SNARLS ( VG_INDEX.out.xg )
+        VG_SNARLS ( VG_CONVERT.out.xg )
 
         // pre-compute gt support
         VG_PACK ( ch_filtered_gam_gbz )
@@ -207,7 +207,7 @@ workflow VG_TOOLKIT {
 
             [ metaG , vcf, tbi ]
         }
-        .groupTuple(by:0).view()
+        .groupTuple(by:0)
 
         BCFTOOLS_MERGE ( ch_indv_vcf_tbi )
 
@@ -293,11 +293,11 @@ workflow VG_TOOLKIT {
 
         ch_freebayes = FREEBAYES ( ch_bam_bai_bed_fasta_fai, [], [], [] ).vcf
 
-        BCFTOOLS_SORT1 ( ch_freebayes )
+        BCFTOOLS_SORT_SAMPLES ( ch_freebayes )
 
-        BCFTOOLS_INDEX1 ( BCFTOOLS_SORT1.out.vcf )
+        BCFTOOLS_INDEX1 ( BCFTOOLS_SORT_SAMPLES.out.vcf )
 
-        ch_fbvcf_tbi = BCFTOOLS_SORT1.out.vcf
+        ch_fbvcf_tbi = BCFTOOLS_SORT_SAMPLES.out.vcf
             .join(BCFTOOLS_INDEX1.out.tbi, by: 0)
             .map { meta, vcf, tbi ->
                 def metaG = [:]
