@@ -30,7 +30,6 @@ process FREEBAYES {
     """
     freebayes \\
         -f $fasta \\
-        $region \\
         $samples_file \\
         $populations_file \\
         $cnv_file \\
