@@ -8,7 +8,7 @@ process FREEBAYES {
         'quay.io/biocontainers/freebayes:1.3.5--py38ha193a2f_3' }"
 
     input:
-    tuple val(meta), path(bam), path(bai), val(chromosome), path(fasta), path(fai)
+    tuple val(meta), path(bam), path(bai), path(target_bed), path(fasta), path(fai)
     path samples
     path populations
     path cnv
@@ -23,20 +23,22 @@ process FREEBAYES {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def region           = chromosome     ? "-r ${chromosome}"             : ""
+    def region = task.ext.prefix ?: "${meta.region}"
+    def targets_file     = target_bed     ? "--target ${target_bed}"       : ""
     def samples_file     = samples        ? "--samples ${samples}"         : ""
     def populations_file = populations    ? "--populations ${populations}" : ""
     def cnv_file         = cnv            ? "--cnv-map ${cnv}"             : ""
     """
     freebayes \\
         -f $fasta \\
+        $targets_file \\
         $samples_file \\
         $populations_file \\
         $cnv_file \\
         $args \\
-        $bam > ${chromosome}.vcf
+        $bam > ${prefix}_${region}.vcf
     
-    bgzip ${chromosome}.vcf
+    bgzip ${prefix}_${region}.vcf
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

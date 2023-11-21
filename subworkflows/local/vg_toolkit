@@ -107,7 +107,12 @@ workflow VG_TOOLKIT {
 
     VG_INDEX ( VG_CONSTRUCT.out.graph )
 
+    //SUBSET_FASTA (  )
+
+    //SAMTOOLS_FAIDX_FASTAS (  )
+
     ch_vcf_tbi_fasta_fai = ch_vcf_tbi_insfasta_fasta_fai.map{meta, vcf, tbi, insfasta, fasta, fai -> [meta, vcf, tbi, fasta, fai]}
+
 
     VG_AUTOINDEX ( ch_vcf_tbi_fasta_fai, 'giraffe' )
 
@@ -252,6 +257,8 @@ workflow VG_TOOLKIT {
             [ metaf, fasta, fai ]
         }
 
+        ch_bed = ch_fasta_fai.map { WorkflowVG.convertFaiToBed( it[0], it[2]) }
+
         // remove id for grouping and combining based on chromosome
         ch_bam_fasta_fai = SAMTOOLS_SORT.out.bam
             .map { meta, bam ->
@@ -274,6 +281,7 @@ workflow VG_TOOLKIT {
 
         SAMTOOLS_INDEX ( SAMTOOLS_MERGE.out.bam )
 
+
         // combine merged bam, index, fasta, fai and add meta.region for freebayes region
         ch_bam_bai_bed_fasta_fai = SAMTOOLS_MERGE.out.bam
             .combine(SAMTOOLS_INDEX.out.bai, by: 0)
@@ -283,12 +291,13 @@ workflow VG_TOOLKIT {
                 [ metaf, bam, bai ]
             }
             .combine(ch_fasta_fai, by: 0)
-            .map { meta, bam, bai, fasta, fai -> 
+            .combine(ch_bed, by: 0)
+            .map { meta, bam, bai, fasta, fai, bed -> 
                 metaT = [:]
                 metaT.id = 'msp' + '_' + meta.region
                 metaT.region = meta.region
                 
-                [ metaT, bam, bai, meta.region, fasta, fai]
+                [ metaT, bam, bai, bed, fasta, fai]
             }
 
         ch_freebayes = FREEBAYES ( ch_bam_bai_bed_fasta_fai, [], [], [] ).vcf
