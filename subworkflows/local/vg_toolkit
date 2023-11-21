@@ -158,7 +158,7 @@ workflow VG_TOOLKIT {
 
     VG_FILTER ( ch_gam_xg )
 
-    ch_filtered_gam_gbz = VG_FILTER.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
+    ch_filtered_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
         .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
         .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
     
