@@ -22,9 +22,9 @@ process VG_SURJECT {
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
     vg surject \\
-        -x ${xg} \\
-        -b ${gam} \\
-        > ${prefix}.bam
+        -x "${xg}" \\
+        -b "${gam}" \\
+        > "${prefix}.bam"
     
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -34,6 +34,8 @@ include { GUNZIP } from '../../modules/nf-core/gunzip/main'
 include { VG_CONVERT } from '../../modules/local/vg/convert/main'
 include { SAMTOOLS_SORT } from '../../modules/nf-core/samtools/sort/main'
 include { COMBINE_FASTA_FILES } from '../../modules/local/combine_fasta/main'
+include { BEDTOOLS_MAKEWINDOWS } from '../../modules/nf-core/bedtools/makewindows/main'
+include { BEDTOOLS_BAMTOBED } from '../../modules/nf-core/bedtools/bamtobed/main'
 
 workflow VG_TOOLKIT {
 
@@ -231,10 +233,10 @@ workflow VG_TOOLKIT {
     if (params.enable_freebayes) {
 
         // convert gam into bam files
-        VG_SURJECT ( ch_filtered_gam_gbz )
+        //VG_SURJECT ( ch_filtered_gam_gbz )
 
         // sort the files for indexing
-        SAMTOOLS_SORT ( VG_SURJECT.out.bam )
+        SAMTOOLS_SORT ( VG_GIRAFFE.out.bam )
 
         // deconstruct graph into fasta
         VG_PATHS ( VG_CONSTRUCT.out.graph )
@@ -281,6 +283,11 @@ workflow VG_TOOLKIT {
 
         SAMTOOLS_INDEX ( SAMTOOLS_MERGE.out.bam )
 
+        //BEDTOOLS_BAMTOBED ( SAMTOOLS_MERGE.out.bam )
+
+        BEDTOOLS_MAKEWINDOWS ( SAMTOOLS_FAIDX_2.out.fai, [], [], params.windowSize )
+
+        ch_intervals = BEDTOOLS_MAKEWINDOWS.out.bed.map { WorkflowVG.splitBedFile(params, log, it) }.transpose().map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
 
         // combine merged bam, index, fasta, fai and add meta.region for freebayes region
         ch_bam_bai_bed_fasta_fai = SAMTOOLS_MERGE.out.bam
@@ -291,18 +298,20 @@ workflow VG_TOOLKIT {
                 [ metaf, bam, bai ]
             }
             .combine(ch_fasta_fai, by: 0)
-            .combine(ch_bed, by: 0)
+            .combine(ch_intervals, by: 0)
             .map { meta, bam, bai, fasta, fai, bed -> 
                 metaT = [:]
-                metaT.id = 'msp' + '_' + meta.region
+                metaT.target = bed.simpleName.tokenize('_')[1]
+                metaT.id = 'msp' + '_' + meta.region + '_' + metaT.target
                 metaT.region = meta.region
+                
                 
                 [ metaT, bam, bai, bed, fasta, fai]
             }
 
-        ch_freebayes = FREEBAYES ( ch_bam_bai_bed_fasta_fai, [], [], [] ).vcf
+        FREEBAYES ( ch_bam_bai_bed_fasta_fai, [], [], [] )
 
-        BCFTOOLS_SORT_SAMPLES ( ch_freebayes )
+        BCFTOOLS_SORT_SAMPLES ( FREEBAYES.out.vcf )
 
         BCFTOOLS_INDEX1 ( BCFTOOLS_SORT_SAMPLES.out.vcf )
 

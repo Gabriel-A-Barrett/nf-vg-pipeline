@@ -1,124 +1,102 @@
 {
-    "name": "",
-    "homePage": "",
-    "repos": {
-        "https://github.com/nf-core/modules.git": {
-            "modules": {
-                "nf-core": {
-                    "bcftools/concat": {
-                        "branch": "master",
-                        "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "bcftools/index": {
-                        "branch": "master",
-                        "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "bcftools/merge": {
-                        "branch": "master",
-                        "git_sha": "f7219b428dc69f93aa19f219fb7ce8eae8720400",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "bcftools/norm": {
-                        "branch": "master",
-                        "git_sha": "0435e4eebc94e53721c194b2d5d06f455a79e407",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "bcftools/reheader": {
-                        "branch": "master",
-                        "git_sha": "0435e4eebc94e53721c194b2d5d06f455a79e407",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "bcftools/sort": {
-                        "branch": "master",
-                        "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "bcftools/view": {
-                        "branch": "master",
-                        "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "freebayes": {
-                        "branch": "master",
-                        "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "gunzip": {
-                        "branch": "master",
-                        "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "samtools/faidx": {
-                        "branch": "master",
-                        "git_sha": "fd742419940e01ba1c5ecb172c3e32ec840662fe",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "samtools/index": {
-                        "branch": "master",
-                        "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "samtools/merge": {
-                        "branch": "master",
-                        "git_sha": "e7ce60acc8a33fa17429e966364657a63016e870",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "samtools/sort": {
-                        "branch": "master",
-                        "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "tabix/tabix": {
-                        "branch": "master",
-                        "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "vg/construct": {
-                        "branch": "master",
-                        "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    },
-                    "vg/index": {
-                        "branch": "master",
-                        "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
-                        "installed_by": [
-                            "modules"
-                        ]
-                    }
-                }
-            }
+  "name": "",
+  "homePage": "",
+  "repos": {
+    "https://github.com/nf-core/modules.git": {
+      "modules": {
+        "nf-core": {
+          "bcftools/concat": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          },
+          "bcftools/index": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          },
+          "bcftools/merge": {
+            "branch": "master",
+            "git_sha": "f7219b428dc69f93aa19f219fb7ce8eae8720400",
+            "installed_by": ["modules"]
+          },
+          "bcftools/norm": {
+            "branch": "master",
+            "git_sha": "0435e4eebc94e53721c194b2d5d06f455a79e407",
+            "installed_by": ["modules"]
+          },
+          "bcftools/reheader": {
+            "branch": "master",
+            "git_sha": "0435e4eebc94e53721c194b2d5d06f455a79e407",
+            "installed_by": ["modules"]
+          },
+          "bcftools/sort": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          },
+          "bcftools/view": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          },
+          "bedtools/bamtobed": {
+            "branch": "master",
+            "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
+            "installed_by": ["modules"]
+          },
+          "bedtools/makewindows": {
+            "branch": "master",
+            "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
+            "installed_by": ["modules"]
+          },
+          "freebayes": {
+            "branch": "master",
+            "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
+            "installed_by": ["modules"]
+          },
+          "gunzip": {
+            "branch": "master",
+            "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
+            "installed_by": ["modules"]
+          },
+          "samtools/faidx": {
+            "branch": "master",
+            "git_sha": "fd742419940e01ba1c5ecb172c3e32ec840662fe",
+            "installed_by": ["modules"]
+          },
+          "samtools/index": {
+            "branch": "master",
+            "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
+            "installed_by": ["modules"]
+          },
+          "samtools/merge": {
+            "branch": "master",
+            "git_sha": "e7ce60acc8a33fa17429e966364657a63016e870",
+            "installed_by": ["modules"]
+          },
+          "samtools/sort": {
+            "branch": "master",
+            "git_sha": "3f5420aa22e00bd030a2556dfdffc9e164ec0ec5",
+            "installed_by": ["modules"]
+          },
+          "tabix/tabix": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          },
+          "vg/construct": {
+            "branch": "master",
+            "git_sha": "8fc1d24c710ebe1d5de0f2447ec9439fd3d9d66a",
+            "installed_by": ["modules"]
+          },
+          "vg/index": {
+            "branch": "master",
+            "git_sha": "911696ea0b62df80e900ef244d7867d177971f73",
+            "installed_by": ["modules"]
+          }
         }
+      }
     }
+  }
 }

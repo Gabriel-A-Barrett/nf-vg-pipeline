@@ -41,4 +41,44 @@ class WorkflowVG {
             return null
         }
     }
+    public static ArrayList splitBedFile(params, log, bed) {
+        def meta = bed[0]
+        def inputLines = bed[1]
+
+        def outputFilePath = inputLines.getParent() + '/split_bed_files'
+        outputFilePath.mkdir()
+        def outputFilePaths = []
+
+        def linesPerFile = params.splitNLines
+        def outputLines = []
+        def fileCounter = 0
+
+        inputLines.eachLine { line ->
+            outputLines << line
+
+            if (outputLines.size() == linesPerFile) {
+                def outputFile = new File("${outputFilePath}/split_${fileCounter}.bed")
+                outputFile.withWriter { writer ->
+                    outputLines.each { outputLine ->
+                        writer.writeLine(outputLine)
+                    }
+                }
+                outputFilePaths << outputFile
+                outputLines.clear()
+                fileCounter++
+            }
+        }
+
+        if (!outputLines.isEmpty()) {
+            def outputFile = new File("${outputFilePath}/split_${fileCounter}.bed")
+            outputFile.withWriter { writer ->
+                outputLines.each { outputLine ->
+                    writer.writeLine(outputLine)
+                }
+            }
+            outputFilePaths << outputFile
+        }
+
+        return [meta, outputFilePaths]
+    }
 }

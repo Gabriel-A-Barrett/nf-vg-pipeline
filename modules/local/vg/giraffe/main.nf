@@ -12,6 +12,7 @@ process VG_GIRAFFE {
 
     output:
     tuple val(meta), path("*.gam"), emit: gam, optional: true
+    tuple val(meta), path("*.bam"), emit: bam, optional: true
     path "versions.yml"           , emit: versions
 
     when:
@@ -34,6 +35,11 @@ process VG_GIRAFFE {
         -p \\
         > ${prefix}.gam
     
+    vg surject \\
+        -x ${gbz} \\
+        -b ${prefix}.gam \\
+        > ${prefix}.bam
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         vg: \$(echo \$(vg 2>&1 | head -n 1 | sed 's/vg: variation graph tool, version v//;s/ ".*"//' ))
