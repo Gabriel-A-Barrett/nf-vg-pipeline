@@ -76,7 +76,8 @@ workflow VG_TOOLKIT {
     
     } else {
 
-        ch_fai = SAMTOOLS_FAIDX_1 ( ch_fasta, [[:],[]] ).fai
+        ch_fai = SAMTOOLS_FAIDX_1 ( ch_fasta, [[:],[]] ).fai.map { fai -> 
+                tuple ([id:fai.simpleName], fai) }
 
     }
 
@@ -158,14 +159,16 @@ workflow VG_TOOLKIT {
         return tuple( metaf, gam, xg )
     }
 
-    VG_FILTER ( ch_gam_xg )
-
-    ch_filtered_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
-        .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
-        .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
     
-    VG_STATS ( VG_FILTER.out.gam )
+    if (params.enable_vgfilter) {
+        VG_FILTER ( ch_gam_xg )
 
+        ch_filtered_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
+            .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
+            .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
+        
+        VG_STATS ( VG_FILTER.out.gam )
+    }
     // check the number of reads
     if (params.enable_vgcall) {
 
@@ -241,7 +244,7 @@ workflow VG_TOOLKIT {
         // deconstruct graph into fasta
         VG_PATHS ( VG_CONSTRUCT.out.graph )
 
-        ch_fastas = VG_PATHS.out.fasta.map { meta, fasta ->
+        ch_fastas = VG_PATHS.out.fasta.map { mefta, fasta ->
             metaD = [:]
             metaD.id = meta.id
             [ metaD, fasta ]
