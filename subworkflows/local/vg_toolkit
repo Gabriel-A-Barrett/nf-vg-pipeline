@@ -138,7 +138,7 @@ workflow VG_TOOLKIT {
                     return [ metaf, fq_files, gbz, min, dist ]
                 }
 
-    VG_GIRAFFE ( ch_fq )
+    ch_gam = VG_GIRAFFE ( ch_fq ).gam
 
     ch_gam_to_join = VG_GIRAFFE.out.gam.map { meta, gam -> 
         metaf = [:]
@@ -158,17 +158,17 @@ workflow VG_TOOLKIT {
         metaf.region = meta.region
         return tuple( metaf, gam, xg )
     }
-
-    
+     
     if (params.enable_vgfilter) {
-        VG_FILTER ( ch_gam_xg )
-
-        ch_filtered_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
-            .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
-            .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
-        
-        VG_STATS ( VG_FILTER.out.gam )
+        ch_gam = VG_FILTER ( ch_gam_xg ).gam
     }
+
+    VG_STATS ( ch_gam )
+
+    ch_filtered_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
+        .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
+        .map { WorkflowVG.insertIndvIdIntoChannel (it[0], it[1..-1]) }
+    
     // check the number of reads
     if (params.enable_vgcall) {
 
@@ -244,7 +244,7 @@ workflow VG_TOOLKIT {
         // deconstruct graph into fasta
         VG_PATHS ( VG_CONSTRUCT.out.graph )
 
-        ch_fastas = VG_PATHS.out.fasta.map { mefta, fasta ->
+        ch_fastas = VG_PATHS.out.fasta.map { meta, fasta ->
             metaD = [:]
             metaD.id = meta.id
             [ metaD, fasta ]
