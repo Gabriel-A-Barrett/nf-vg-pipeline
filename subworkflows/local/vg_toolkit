@@ -76,7 +76,7 @@ workflow VG_TOOLKIT {
     
     } else {
 
-        ch_fai = SAMTOOLS_FAIDX_1 ( ch_fasta, [[:],[]] ).fai.map { fai -> 
+        ch_fai = SAMTOOLS_FAIDX_1 ( ch_fasta, [[:],[]] ).fai.map { meta, fai -> 
                 tuple ([id:fai.simpleName], fai) }
 
     }
