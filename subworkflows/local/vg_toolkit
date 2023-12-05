@@ -140,30 +140,31 @@ workflow VG_TOOLKIT {
 
     ch_gam = VG_GIRAFFE ( ch_fq ).gam
 
-    ch_gam_to_join = VG_GIRAFFE.out.gam.map { meta, gam -> 
-        metaf = [:]
-        metaf.region = meta.region
-        return [ metaf, gam ]
-    }
-
-    ch_xg_to_join = VG_CONVERT.out.xg.map { meta, xg -> 
-        metaf = [:]
-        metaf.region = meta.region
-        return [ metaf, xg ]
-    }
-
-    ch_gam_xg = ch_gam_to_join.combine(ch_xg_to_join, by: 0).map { meta, gam, xg -> 
-        metaf = [:]
-        metaf.id = gam.simpleName
-        metaf.region = meta.region
-        return tuple( metaf, gam, xg )
-    }
-     
     if (params.enable_vgfilter) {
-        ch_gam = VG_FILTER ( ch_gam_xg ).gam
-    }
 
-    VG_STATS ( ch_gam )
+        ch_gam_to_join = VG_GIRAFFE.out.gam.map { meta, gam -> 
+            metaf = [:]
+            metaf.region = meta.region
+            return [ metaf, gam ]
+        }
+
+        ch_xg_to_join = VG_CONVERT.out.xg.map { meta, xg -> 
+            metaf = [:]
+            metaf.region = meta.region
+            return [ metaf, xg ]
+        }
+
+        ch_gam_xg = ch_gam_to_join.combine(ch_xg_to_join, by: 0).map { meta, gam, xg -> 
+            metaf = [:]
+            metaf.id = gam.simpleName
+            metaf.region = meta.region
+            return tuple( metaf, gam, xg )
+        }
+
+        ch_gam = VG_FILTER ( ch_gam_xg ).gam
+    
+        VG_STATS ( ch_gam )
+    }
 
     ch_filtered_gam_gbz = VG_GIRAFFE.out.gam.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }
         .combine( VG_AUTOINDEX.out.gbz.map { WorkflowVG.removeIdFromGroovyMap(it[0], it[1..-1]) }, by: 0 )
