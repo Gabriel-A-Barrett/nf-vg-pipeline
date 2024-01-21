@@ -132,7 +132,7 @@ workflow VG_TOOLKIT {
                 }.combine(ch_gbz_min_dist)
                 .map { meta, fq_files, meta2, gbz, min, dist -> 
                     metaf = [:]
-                    metaf.id = meta.id + '_' + meta2.region
+                    metaf.id = meta.id + '-' + meta2.region
                     metaf.region = meta2.region
 
                     return [ metaf, fq_files, gbz, min, dist ]
@@ -251,6 +251,10 @@ workflow VG_TOOLKIT {
             [ metaD, fasta ]
         }.groupTuple(by:0)
 
+        ch_fasta.view()
+
+        VG_PATHS.out.fasta.view()
+
         COMBINE_FASTA_FILES ( ch_fastas ).fasta
 
         // index
@@ -313,6 +317,8 @@ workflow VG_TOOLKIT {
                 [ metaT, bam, bai, bed, fasta, fai]
             }
 
+
+        // how are the individual ID's settled probs from RG
         FREEBAYES ( ch_bam_bai_bed_fasta_fai, [], [], [] )
 
         BCFTOOLS_SORT_SAMPLES ( FREEBAYES.out.vcf )
